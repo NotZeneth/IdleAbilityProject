@@ -1,18 +1,26 @@
-// AbilityData.h
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "AbilityData.generated.h"
 
-// Type de déclenchement de l'ability
+class UAbilityEffect;
+
 UENUM(BlueprintType)
 enum class EAbilityTriggerType : uint8
 {
-    Manual     UMETA(DisplayName = "Manual"),    // Le joueur clique sur un bouton
-    Auto       UMETA(DisplayName = "Auto"),      // Lancé automatiquement
-    OnEvent    UMETA(DisplayName = "On Event")   // Se déclenche via un évènement (ex: projectile hit)
+    Manual   UMETA(DisplayName = "Manual"),
+    Auto     UMETA(DisplayName = "Auto"),
+    OnEvent  UMETA(DisplayName = "On Event")
+};
+
+UENUM(BlueprintType)
+enum class EAbilityTargeting : uint8
+{
+    Self                UMETA(DisplayName = "Self"),
+    SingleNearestEnemy  UMETA(DisplayName = "Single Nearest Enemy"),
+    AllEnemiesInRange   UMETA(DisplayName = "All Enemies In Range"),
+    RandomEnemies       UMETA(DisplayName = "Random Enemies")
 };
 
 UCLASS(BlueprintType)
@@ -21,31 +29,39 @@ class IDLEABILITY_API UAbilityData : public UDataAsset
     GENERATED_BODY()
 
 public:
-
-    // Nom affiché
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     FText AbilityName;
 
-    // Icône (UI)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    UTexture2D* Icon;
-
-    // Cooldown en secondes
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float Cooldown;
-
-    // Durée (0 = instantané)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float Duration;
-
-    // Type de déclenchement
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    EAbilityTriggerType TriggerType;
-
-    // Valeurs principales (ex: dégâts, heal, slow %, etc.)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float PrimaryValue;
+    UTexture2D* Icon = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float SecondaryValue;
+    float Cooldown = 1.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    float Duration = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    EAbilityTriggerType TriggerType = EAbilityTriggerType::Manual;
+
+    // Deux “tracks” génériques pour upgrades (dégâts, %slow, durée, etc.)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    float PrimaryValue = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    float SecondaryValue = 0.f;
+
+    // ---- Targeting ----
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting")
+    EAbilityTargeting Targeting = EAbilityTargeting::SingleNearestEnemy;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting!=EAbilityTargeting::Self"))
+    float Range = 2000.f; // rayon de recherche
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting==EAbilityTargeting::RandomEnemies", ClampMin = "1"))
+    int32 TargetCount = 1;
+
+    // ---- Effets (data-driven) ----
+    UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Effects")
+    TArray<UAbilityEffect*> Effects; // ex: Damage, Heal, Buff, etc.
 };

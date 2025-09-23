@@ -1,9 +1,9 @@
-// AbilityManagerComponent.cpp
-
 #include "AbilityManagerComponent.h"
-#include "GameFramework/Actor.h"
-#include "Engine/World.h"
 #include "CustomCharacter.h"
+#include "AbilityEffect.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Algo/RandomShuffle.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
 {
@@ -42,31 +42,111 @@ void UAbilityManagerComponent::TryActivateAbility(int32 AbilityIndex)
     FAbilitySpec& Spec = EquippedAbilities[AbilityIndex];
     if (!IsAbilityReady(Spec)) return;
 
+    ACustomCharacter* Caster = Cast<ACustomCharacter>(GetOwner());
+    if (!Caster) return;
+
     ExecuteAbility(Spec);
 
-    // Mettre en cooldown
-    Spec.CooldownEndTime = GetWorld()->TimeSeconds + Spec.Ability->Cooldown;
+    // Cooldown ajusté par la stat
+    float FinalCooldown = Spec.Ability->Cooldown * (1.f - Caster->CooldownReduction);
+    if (FinalCooldown < 0.1f) FinalCooldown = 0.1f; // clamp minimum
+
+    Spec.CooldownEndTime = GetWorld()->TimeSeconds + FinalCooldown;
 }
 
 void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
 {
     if (!Spec.Ability) return;
 
-    AActor* Owner = GetOwner();
-    ACustomCharacter* Caster = Cast<ACustomCharacter>(Owner);
-
+    ACustomCharacter* Caster = Cast<ACustomCharacter>(GetOwner());
     if (!Caster) return;
 
-    // Exemple très simple : ability = dégâts directs sur la première cible trouvée
-    if (Spec.Ability->AbilityName.EqualTo(FText::FromString("Basic Attack")))
+    // 1) Trouver les cibles depuis la data
+    TArray<ACustomCharacter*> Targets;
+    FindTargets(Spec.Ability, Caster, Targets);
+
+    // Self-case: si Targeting=Self et aucune cible
+    if (Spec.Ability->Targeting == EAbilityTargeting::Self && Targets.Num() == 0)
     {
-        // TODO : chercher une vraie cible. Ici on fait juste log.
-        UE_LOG(LogTemp, Warning, TEXT("%s lance Basic Attack (%.1f dégâts)"),
-            *Caster->GetName(), Spec.Ability->PrimaryValue);
+        Targets.Add(Caster);
     }
-    else
+
+    if (Targets.Num() == 0 && Spec.Ability->Targeting != EAbilityTargeting::Self)
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s utilise %s"),
+        UE_LOG(LogTemp, Warning, TEXT("%s a lancé %s mais aucune cible trouvée."),
             *Caster->GetName(), *Spec.Ability->AbilityName.ToString());
+        return;
+    }
+
+    // 2) Appliquer TOUS les effets définis dans le DataAsset à CHAQUE cible
+    for (UAbilityEffect* Effect : Spec.Ability->Effects)
+    {
+        if (!Effect) continue;
+
+        for (ACustomCharacter* Tgt : Targets)
+        {
+            Effect->ApplyEffect(Caster, Tgt, Spec.Ability);
+
+            // Log de debug
+            UE_LOG(LogTemp, Warning, TEXT("%s utilise %s sur %s"),
+                *Caster->GetName(),
+                *Spec.Ability->AbilityName.ToString(),
+                *Tgt->GetName());
+        }
+    }
+}
+
+void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const
+{
+    if (!Ability || !Caster) return;
+
+    // Collecte brute des ennemis potentiels
+    TArray<ACustomCharacter*> Candidates;
+    for (TActorIterator<ACustomCharacter> It(GetWorld()); It; ++It)
+    {
+        ACustomCharacter* C = *It;
+        if (!C || C == Caster) continue;
+
+        // Filtre "ennemi" par TeamId
+        if (C->TeamId == Caster->TeamId) continue;
+
+        Candidates.Add(C);
+    }
+
+    if (Ability->Targeting == EAbilityTargeting::RandomEnemies)
+    {
+        Algo::RandomShuffle(Candidates);
+        const int32 N = FMath::Min(Ability->TargetCount, Candidates.Num());
+        for (int32 i = 0; i < N; ++i)
+        {
+            OutTargets.Add(Candidates[i]);
+        }
+    }
+    else if (Ability->Targeting == EAbilityTargeting::SingleNearestEnemy)
+    {
+        float BestDistSq = TNumericLimits<float>::Max();
+        ACustomCharacter* Best = nullptr;
+
+        for (ACustomCharacter* C : Candidates)
+        {
+            float d = FVector::DistSquared(C->GetActorLocation(), Caster->GetActorLocation());
+            if (d < BestDistSq && d <= Ability->Range * Ability->Range)
+            {
+                BestDistSq = d;
+                Best = C;
+            }
+        }
+        if (Best) OutTargets.Add(Best);
+    }
+    else if (Ability->Targeting == EAbilityTargeting::AllEnemiesInRange)
+    {
+        for (ACustomCharacter* C : Candidates)
+        {
+            float d = FVector::DistSquared(C->GetActorLocation(), Caster->GetActorLocation());
+            if (d <= Ability->Range * Ability->Range)
+            {
+                OutTargets.Add(C);
+            }
+        }
     }
 }

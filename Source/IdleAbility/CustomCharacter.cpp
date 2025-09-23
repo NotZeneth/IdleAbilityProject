@@ -11,14 +11,13 @@ ACustomCharacter::ACustomCharacter()
 {
     // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
-    CurrentHP = MaxHP;
 }
 
 // Called when the game starts or when spawned
 void ACustomCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
+    CurrentHP = MaxHP;
 }
 
 // Called every frame
@@ -65,6 +64,7 @@ void ACustomCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
     // Pure = pas de réduction
 
     CurrentHP = FMath::Clamp(CurrentHP - FinalDamage, 0.f, MaxHP);
+    UE_LOG(LogTemp, Warning, TEXT("New health is %f"), CurrentHP);
 
     if (!IsAlive())
     {

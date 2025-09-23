@@ -12,7 +12,7 @@ struct FAbilitySpec
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     UAbilityData* Ability = nullptr;
 
     // Temps où le cooldown se termine
@@ -45,6 +45,8 @@ public:
     bool IsAbilityReady(const FAbilitySpec& Spec) const;
 
 private:
-    // Applique les effets de l'ability
     void ExecuteAbility(const FAbilitySpec& Spec);
+
+    // Renvoie les cibles en fonction du Targeting du DataAsset
+    void FindTargets(const UAbilityData* Ability, class ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const;
 };
