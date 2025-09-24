@@ -44,7 +44,7 @@ public:
     // Vérifie cooldown
     bool IsAbilityReady(const FAbilitySpec& Spec) const;
 
-private:
+public:
     void ExecuteAbility(const FAbilitySpec& Spec);
 
     // Renvoie les cibles en fonction du Targeting du DataAsset

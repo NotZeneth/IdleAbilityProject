@@ -78,4 +78,19 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Stats")
     bool IsAlive();
+
+public: 
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MultishotChance = 0.1f; 
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    int32 MultishotAmount = 2; 
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float BounceChance = 0.1f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float FrenzyChance = 0.05f;
 };

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "CustomCharacter.h" // pour l'enum dmg type
 #include "AbilityData.generated.h"
 
 class UAbilityEffect;
@@ -43,6 +44,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     EAbilityTriggerType TriggerType = EAbilityTriggerType::Manual;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    EDamageType AbilityType = EDamageType::Pure;
 
     // Deux “tracks” génériques pour upgrades (dégâts, %slow, durée, etc.)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")

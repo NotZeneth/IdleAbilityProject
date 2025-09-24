@@ -2,17 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "AbilityEffect.h"
-#include "CustomCharacter.h" // <-- ajoute ceci pour avoir EDamageType
-
 #include "DamageEffect.generated.h"
 
-UCLASS(BlueprintType, EditInlineNew)
+UCLASS(BlueprintType, EditInlineNew, DefaultToInstanced)
 class IDLEABILITY_API UDamageEffect : public UAbilityEffect
 {
     GENERATED_BODY()
-public:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-    EDamageType DamageType = EDamageType::Physical;
 
+public:
     virtual void ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData) override;
 };
