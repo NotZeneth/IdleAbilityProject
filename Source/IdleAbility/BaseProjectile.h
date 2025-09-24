@@ -9,6 +9,7 @@
 class ACustomCharacter;
 class UAbilityData;
 class UAbilityEffect;
+class UBoxComponent;
 
 UENUM(BlueprintType)
 enum class EProjectileMovementType : uint8
@@ -35,11 +36,12 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
     USceneComponent* Root;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component");
-    class UBoxComponent* Collision;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UBoxComponent* Collision;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component");
-    class UStaticMeshComponent* Mesh;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UStaticMeshComponent* Mesh;
+
 
     // ---- Data ----
     UPROPERTY()
@@ -60,8 +62,18 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
     EProjectileMovementType MovementType = EProjectileMovementType::Forward;
 
-private:
     FVector InitialDirection;
+
+    // Orientation helpers
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    bool bRotateToVelocity = true;
+
+    // Si ton mesh ne pointe pas sur +X, mets un offset (ex: 90 si ton mesh pointe +Y)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    float MeshYawOffsetDeg = 0.f;
+
+
+private:
 
     UFUNCTION()
     void OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,

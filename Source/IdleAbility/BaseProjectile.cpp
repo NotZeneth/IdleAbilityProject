@@ -17,9 +17,9 @@ ABaseProjectile::ABaseProjectile()
 
     // Collision
     Collision = CreateDefaultSubobject<UBoxComponent>(TEXT("Collision"));
-    Collision->InitBoxExtent(FVector(15.f)); // cube de 30x30x30
-    Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
     Collision->SetupAttachment(Root);
+    Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic")); // ou ton custom preset
+
 
     Collision->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlap);
 
@@ -33,7 +33,6 @@ void ABaseProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Direction initiale
     if (Target && MovementType == EProjectileMovementType::TowardTarget)
     {
         InitialDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
@@ -42,35 +41,47 @@ void ABaseProjectile::BeginPlay()
     {
         InitialDirection = GetActorForwardVector();
     }
+
+    if (bRotateToVelocity)
+    {
+        FRotator Rot = InitialDirection.Rotation();
+        Rot.Yaw += MeshYawOffsetDeg;
+        SetActorRotation(Rot);
+    }
 }
+
 
 void ABaseProjectile::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    FVector MoveDir;
+    FVector MoveDir = InitialDirection;
 
     switch (MovementType)
     {
-    case EProjectileMovementType::Forward:
     case EProjectileMovementType::TowardTarget:
-        MoveDir = InitialDirection;
-        break;
-
+    case EProjectileMovementType::Forward:
+        break; // déjà défini dans InitialDirection
     case EProjectileMovementType::Homing:
         if (Target && Target->IsAlive())
         {
             MoveDir = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         }
-        else
-        {
-            MoveDir = InitialDirection;
-        }
         break;
     }
-
     SetActorLocation(GetActorLocation() + MoveDir * ProjectileSpeed * DeltaTime, true);
+
+    if (bRotateToVelocity)
+    {
+        FRotator Rot = MoveDir.Rotation();
+        Rot.Yaw += MeshYawOffsetDeg;
+        SetActorRotation(Rot);
+    }
+
+    InitialDirection = MoveDir; // garde la dernière direction
 }
+
+
 
 void ABaseProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
@@ -79,21 +90,25 @@ void ABaseProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, A
     if (Source == nullptr) return;
     if (OtherActor == Source) return;
 
+    UE_LOG(LogTemp, Warning, TEXT("[Projectile %s] Hit %s (Source=%s) | NbEffects=%d"),
+        *GetName(),
+        *OtherActor->GetName(),
+        Source ? *Source->GetName() : TEXT("null"),
+        EffectsOnHit.Num());
+
 
     ACustomCharacter* HitCharacter = Cast<ACustomCharacter>(OtherActor);
     if (HitCharacter && HitCharacter != Source)
     {
-        // Appliquer tous les effets "OnHit"
+        FAbilityEffectContext Ctx(Source, HitCharacter, AbilityData, this);
+
         for (UAbilityEffect* Effect : EffectsOnHit)
         {
             if (Effect && Effect->TriggerPhase == EEffectTriggerPhase::OnHit)
             {
-                Effect->ApplyEffect(Source, HitCharacter, AbilityData);
+                Effect->ApplyEffect(Ctx);
             }
         }
 
-        UE_LOG(LogTemp, Warning, TEXT("Projectile hit %s"), *HitCharacter->GetName());
-
-        Destroy();
     }
 }

@@ -5,27 +5,27 @@
 #include "BaseProjectile.h"
 #include "CustomCharacter.h"
 
-void USpawnProjectileEffect::ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData)
+void USpawnProjectileEffect::ApplyEffect_Implementation(const FAbilityEffectContext& Context)
 {
-    if (!ProjectileClass || !Source) return;
+    if (!ProjectileClass || !Context.Source) return;
 
     FActorSpawnParameters Params;
-    Params.Owner = Source;
-    Params.Instigator = Source;
+    Params.Owner = Context.Source;
+    Params.Instigator = Context.Source;
 
-    FVector SpawnLoc = Source->GetActorLocation() + FVector(0, 0, 50); // léger offset
-    FRotator SpawnRot = Source->GetActorRotation();
+    FVector SpawnLoc = Context.Source->GetActorLocation() + FVector(0, 0, 50);
+    FRotator SpawnRot = Context.Source->GetActorRotation();
 
-    ABaseProjectile* Proj = Source->GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, SpawnLoc, SpawnRot, Params);
+    ABaseProjectile* Proj = Context.Source->GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, SpawnLoc, SpawnRot, Params);
     if (Proj)
     {
-        Proj->Source = Source;
-        Proj->Target = Target;
-        Proj->AbilityData = AbilityData;
+        Proj->Source = Context.Source;
+        Proj->Target = Context.Target;
+        Proj->AbilityData = Context.AbilityData;
         Proj->EffectsOnHit = SubEffects;
 
         UE_LOG(LogTemp, Warning, TEXT("%s a lancé un projectile (%s)"),
-            *Source->GetName(),
+            *Context.Source->GetName(),
             *ProjectileClass->GetName());
     }
 }

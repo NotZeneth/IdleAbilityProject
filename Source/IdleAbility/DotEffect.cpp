@@ -1,52 +1,50 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "DotEffect.h"
+#include "CustomCharacter.h"
 #include "AbilityData.h"
 #include "TimerManager.h"
-#include "Engine/World.h"
 
-void UDotEffect::ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData)
+void UDotEffect::ApplyEffect_Implementation(const FAbilityEffectContext& Context)
 {
-    if (!Target || !AbilityData) return;
+    if (!Context.Target || !Context.Target->IsAlive() || !Context.Source)
+        return;
 
-    UWorld* World = Target->GetWorld();
-    if (!World) return;
-
-    int32 NumTicks = FMath::FloorToInt(Duration / TickInterval);
-
-    for (int32 i = 0; i < NumTicks; i++)
+    if (UWorld* World = Context.Source->GetWorld())
     {
-        FTimerHandle TimerHandle;
-        FTimerDelegate Delegate;
+        FAbilityEffectContext LocalContext = Context; // copie par valeur
 
-        Delegate.BindUObject(this, &UDotEffect::ApplyTick, Source, Target, AbilityData);
-
+        // Timer pour ticks
+        FTimerHandle TickHandle;
         World->GetTimerManager().SetTimer(
-            TimerHandle,
-            Delegate,
-            TickInterval * (i + 1),
+            TickHandle,
+            FTimerDelegate::CreateUObject(this, &UDotEffect::ApplyTick, LocalContext),
+            TickInterval,
+            true
+        );
+
+        // Timer pour stop après la durée
+        FTimerHandle LifetimeHandle;
+        World->GetTimerManager().SetTimer(
+            LifetimeHandle,
+            FTimerDelegate::CreateLambda([World, TickHandle]() mutable
+                {
+                    World->GetTimerManager().ClearTimer(TickHandle);
+                }),
+            Duration,
             false
         );
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("%s applique un DoT (%s) sur %s : %.1f dmg/tick, %d ticks"),
-        *Source->GetName(),
-        *UEnum::GetValueAsString(AbilityData->AbilityType),
-        *Target->GetName(),
-        AbilityData->PrimaryValue,
-        NumTicks
-    );
 }
 
-void UDotEffect::ApplyTick(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData)
+void UDotEffect::ApplyTick(const FAbilityEffectContext Context)
 {
-    if (!Target || !Target->IsAlive()) return;
+    if (!Context.Target || !Context.Target->IsAlive())
+        return;
 
-    Target->TakeCustomDamage(AbilityData->PrimaryValue, AbilityData->AbilityType, Source);
+    float dmg = Context.AbilityData ? Context.AbilityData->PrimaryValue : 0.f;
+    Context.Target->TakeCustomDamage(dmg, Context.AbilityData->AbilityType, Context.Source);
 
-    UE_LOG(LogTemp, Warning, TEXT("DoT tick : %s prend %.1f dégâts (%s)"),
-        *Target->GetName(),
-        AbilityData->PrimaryValue,
-        *UEnum::GetValueAsString(AbilityData->AbilityType));
+    UE_LOG(LogTemp, Warning, TEXT("[DOT] Tick on %s | Dmg=%.1f | Source=%s"),
+        *Context.Target->GetName(), dmg, *Context.Source->GetName());
 }

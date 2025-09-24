@@ -5,19 +5,16 @@
 #include "CustomCharacter.h"
 #include "AbilityData.h"
 
-void UDamageEffect::ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData)
+void UDamageEffect::ApplyEffect_Implementation(const FAbilityEffectContext& Context)
 {
-    if (!Target || !AbilityData) return;
+    if (!Context.Target || !Context.AbilityData) return;
 
-    float dmg = AbilityData->PrimaryValue;
-    Target->TakeCustomDamage(dmg, AbilityData->AbilityType, Source);
+    float Dmg = Context.AbilityData->PrimaryValue;
+    Context.Target->TakeCustomDamage(Dmg, Context.AbilityData->AbilityType, Context.Source);
 
-    for (UAbilityEffect* SubEffect : SubEffects)
-    {
-        if (SubEffect)
-        {
-            SubEffect->ApplyEffect(Source, Target, AbilityData);
-        }
-    }
-
+    UE_LOG(LogTemp, Warning, TEXT("%s inflige %.1f dégâts (%s) à %s"),
+        *Context.Source->GetName(),
+        Dmg,
+        *UEnum::GetValueAsString(Context.AbilityData->AbilityType),
+        *Context.Target->GetName());
 }

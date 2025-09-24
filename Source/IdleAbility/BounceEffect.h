@@ -4,19 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "AbilityEffect.h"
-#include "MultishotEffect.generated.h"
+#include "BounceEffect.generated.h"
 
 UCLASS(BlueprintType, EditInlineNew, DefaultToInstanced)
-class IDLEABILITY_API UMultishotEffect : public UAbilityEffect
+class IDLEABILITY_API UBounceEffect : public UAbilityEffect
 {
     GENERATED_BODY()
 
 public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Multishot")
-    float Chance = 1.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Multishot")
-    bool bRandomizeTargets = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bounce")
+    float ChanceMultiplier = 1.f;
 
     virtual void ApplyEffect_Implementation(const FAbilityEffectContext& Context) override;
 };

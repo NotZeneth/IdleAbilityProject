@@ -49,4 +49,8 @@ public:
 
     // Renvoie les cibles en fonction du Targeting du DataAsset
     void FindTargets(const UAbilityData* Ability, class ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Abilities")
+    void GetEnemiesInRange(const class ACustomCharacter* Origin, float Range, TArray<class ACustomCharacter*>& Out) const;
+
 };

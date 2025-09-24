@@ -85,9 +85,9 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
 
         for (ACustomCharacter* Tgt : Targets)
         {
-            Effect->ApplyEffect(Caster, Tgt, Spec.Ability);
+            FAbilityEffectContext Ctx(Caster, Tgt, Spec.Ability, nullptr);
+            Effect->ApplyEffect(Ctx);
 
-            // Log de debug
             UE_LOG(LogTemp, Warning, TEXT("%s utilise %s sur %s"),
                 *Caster->GetName(),
                 *Spec.Ability->AbilityName.ToString(),
@@ -147,6 +147,29 @@ void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomC
             {
                 OutTargets.Add(C);
             }
+        }
+    }
+}
+
+void UAbilityManagerComponent::GetEnemiesInRange(const ACustomCharacter* Origin, float Range, TArray<ACustomCharacter*>& Out) const
+{
+    Out.Reset();
+    if (!Origin) return;
+
+    const float RangeSq = (Range <= 0.f) ? FLT_MAX : Range * Range;
+
+    for (TActorIterator<ACustomCharacter> It(GetWorld()); It; ++It)
+    {
+        ACustomCharacter* C = *It;
+        if (!C || C == Origin) continue;
+        if (!C->IsAlive()) continue;
+
+        // Ennemis seulement (si tu as TeamId)
+        if (C->TeamId == Origin->TeamId) continue;
+
+        if (FVector::DistSquared(C->GetActorLocation(), Origin->GetActorLocation()) <= RangeSq)
+        {
+            Out.Add(C);
         }
     }
 }

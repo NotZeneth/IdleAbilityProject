@@ -16,6 +16,5 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
     TSubclassOf<ABaseProjectile> ProjectileClass;
 
-    virtual void ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData) override;
+    virtual void ApplyEffect_Implementation(const FAbilityEffectContext& Context) override;
 };
-

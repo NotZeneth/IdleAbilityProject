@@ -1,76 +1,80 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// MultishotEffect.cpp
 
 #include "MultishotEffect.h"
 #include "AbilityData.h"
-#include "AbilityEffect.h"
 #include "CustomCharacter.h"
 #include "EngineUtils.h"
 #include "Algo/RandomShuffle.h"
+#include "SpawnProjectileEffect.h" // important pour filtrer le bon type
 
-// forward si besoin
-class USpawnProjectileEffect;
-
-void UMultishotEffect::ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData)
+void UMultishotEffect::ApplyEffect_Implementation(const FAbilityEffectContext& Context)
 {
-    if (!Source || !AbilityData) return;
+    if (!Context.Source || !Context.AbilityData) return;
 
-    // 1) Roll de chance
-    if (FMath::FRand() > Chance) return;
+    // 1) Chance de déclenchement
+    if (FMath::FRand() > Context.Source->MultishotChance * Chance) return;
 
-    // 2) Nombre de tirs additionnels autorisés par le joueur
-    const int32 ExtraShots = FMath::Max(0, Source->MultishotAmount);
+    // 2) Nombre max de tirs supplémentaires
+    const int32 ExtraShots = FMath::Max(0, Context.Source->MultishotAmount);
     if (ExtraShots <= 0) return;
 
-    // 3) Collecter TOUTES les cibles ennemies dans le Range de l’ability
+    // 3) Collecter toutes les cibles dans la portée
     TArray<ACustomCharacter*> Candidates;
-    const float RangeSq = AbilityData->Range * AbilityData->Range;
+    const float RangeSq = Context.AbilityData->Range * Context.AbilityData->Range;
 
-    for (TActorIterator<ACustomCharacter> It(Source->GetWorld()); It; ++It)
+    for (TActorIterator<ACustomCharacter> It(Context.Source->GetWorld()); It; ++It)
     {
         ACustomCharacter* C = *It;
-        if (!C || C == Source || !C->IsAlive()) continue;
+        if (!C || C == Context.Source || !C->IsAlive()) continue;
 
-        // Si tu as un TeamId, filtre ici (ex: if (C->TeamId == Source->TeamId) continue;)
-        const float DistSq = FVector::DistSquared(C->GetActorLocation(), Source->GetActorLocation());
+        float DistSq = FVector::DistSquared(C->GetActorLocation(), Context.Source->GetActorLocation());
         if (DistSq <= RangeSq)
         {
             Candidates.Add(C);
         }
     }
 
-    // 4) Ne pas re-tirer sur la cible principale
-    if (Target) { Candidates.Remove(Target); }
+    // 4) On évite de retaper la cible principale
+    if (Context.Target) { Candidates.Remove(Context.Target); }
 
     if (bRandomizeTargets)
     {
         Algo::RandomShuffle(Candidates);
     }
 
-    // 5) Limiter au nombre demandé
+    // 5) Limiter le nombre de tirs supplémentaires
     const int32 ShotsToSpawn = FMath::Min(ExtraShots, Candidates.Num());
     if (ShotsToSpawn <= 0) return;
 
-    // 6) Pour chaque cible supplémentaire, REJOUER UNIQUEMENT les effets OnCast de l’ability
-    //    et ignorer les Multishot/effets OnCast qui ne doivent pas se re-déclencher.
+
+    // 6) Spawn de projectiles sur les cibles choisies
     for (int32 i = 0; i < ShotsToSpawn; ++i)
     {
         ACustomCharacter* ExtraTarget = Candidates[i];
         if (!ExtraTarget || !ExtraTarget->IsAlive()) continue;
 
         UE_LOG(LogTemp, Warning, TEXT("Multishot: %s tire aussi sur %s"),
-            *Source->GetName(), *ExtraTarget->GetName());
+            *Context.Source->GetName(), *ExtraTarget->GetName());
 
-        for (UAbilityEffect* Effect : AbilityData->Effects)
+        UE_LOG(LogTemp, Warning, TEXT("[Multishot] %s -> ExtraTarget=%s | ShotsToSpawn=%d"),
+            Context.Source ? *Context.Source->GetName() : TEXT("null"),
+            ExtraTarget ? *ExtraTarget->GetName() : TEXT("null"),
+            ShotsToSpawn);
+
+
+        // Ne rejoue QUE les effets qui spawnent un projectile
+        for (UAbilityEffect* Effect : Context.AbilityData->Effects)
         {
-            if (!Effect || Effect->TriggerPhase != EEffectTriggerPhase::OnCast)
-                continue;
+            if (!Effect) continue;
 
-            // Éviter la récursion: ne rejoue pas Multishot lui-même
-            if (Effect->IsA(UMultishotEffect::StaticClass()))
-                continue;
-
-            Effect->ApplyEffect(Source, ExtraTarget, AbilityData);
+            if (Effect->IsA(USpawnProjectileEffect::StaticClass()))
+            {
+                FAbilityEffectContext NewCtx(Context.Source, ExtraTarget, Context.AbilityData, nullptr);
+                Effect->ApplyEffect(NewCtx);
+            }
         }
     }
 }
+

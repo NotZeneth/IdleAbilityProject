@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma once
+
 #include "CoreMinimal.h"
 #include "AbilityEffect.h"
 #include "DamageEffect.generated.h"
@@ -10,5 +12,6 @@ class IDLEABILITY_API UDamageEffect : public UAbilityEffect
     GENERATED_BODY()
 
 public:
-    virtual void ApplyEffect_Implementation(ACustomCharacter* Source, ACustomCharacter* Target, const UAbilityData* AbilityData) override;
+
+    virtual void ApplyEffect_Implementation(const FAbilityEffectContext& Context) override;
 };
