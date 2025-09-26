@@ -20,23 +20,18 @@ class IDLEABILITY_API ACustomCharacter : public ACharacter
     GENERATED_BODY()
 
 public:
-    // Sets default values for this character's properties
     ACustomCharacter();
 
 protected:
-    // Called when the game starts or when spawned
     virtual void BeginPlay() override;
 
 public:
-    // Called every frame
     virtual void Tick(float DeltaTime) override;
 
-    // Called to bind functionality to input
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    // --- Faction / équipe ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Faction")
-    int32 TeamId = 0; 
+    int32 TeamId = 0;
 
 public:
 
@@ -53,8 +48,6 @@ public:
     float Attack;
 
 public:
-
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float PhysicalDmgReduction; // 0.2 = 20% reduc
 
@@ -79,17 +72,20 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Stats")
     bool IsAlive();
 
-public: 
+public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MultishotChance = 0.1f; 
+    float MultishotChance = 0.1f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 MultishotAmount = 2; 
+    int32 MultishotAmount = 2;
 
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float BounceChance = 0.1f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    int32 MaxBounces = 3;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float FrenzyChance = 0.05f;

@@ -1,8 +1,10 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #include "AbilityManagerComponent.h"
 #include "CustomCharacter.h"
-#include "AbilityEffect.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "AbilityEffectData.h"
 #include "Algo/RandomShuffle.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
@@ -48,10 +50,15 @@ void UAbilityManagerComponent::TryActivateAbility(int32 AbilityIndex)
     ExecuteAbility(Spec);
 
     // Cooldown ajusté par la stat
-    float FinalCooldown = Spec.Ability->Cooldown * (1.f - Caster->CooldownReduction);
-    if (FinalCooldown < 0.1f) FinalCooldown = 0.1f; // clamp minimum
+    float BaseCd = Spec.Ability->Cooldown;
+    float Scalar = Spec.CooldownScalar; // Modif runtime par des ability comme frenzy
+    float Cdr = 1.f - Caster->CooldownReduction;
+
+    float FinalCooldown = BaseCd * Scalar * Cdr;
+    if (FinalCooldown < 0.1f) FinalCooldown = 0.05f;
 
     Spec.CooldownEndTime = GetWorld()->TimeSeconds + FinalCooldown;
+
 }
 
 void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
@@ -78,22 +85,30 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
         return;
     }
 
-    // 2) Appliquer TOUS les effets définis dans le DataAsset à CHAQUE cible
-    for (UAbilityEffect* Effect : Spec.Ability->Effects)
+    for (UAbilityEffectData* EffectData : Spec.Ability->Effects)
     {
-        if (!Effect) continue;
+        if (!EffectData) continue;
 
-        for (ACustomCharacter* Tgt : Targets)
+        if (EffectData->TriggerPhase == EEffectTriggerPhase::OnCast)
         {
-            FAbilityEffectContext Ctx(Caster, Tgt, Spec.Ability, nullptr);
-            Effect->ApplyEffect(Ctx);
+            UE_LOG(LogTemp, Warning, TEXT("[Ability] Trouvé effet %s (Phase=%s) dans %s"),
+                *EffectData->GetClass()->GetName(),
+                *UEnum::GetValueAsString(EffectData->TriggerPhase),
+                *Spec.Ability->AbilityName.ToString());
 
-            UE_LOG(LogTemp, Warning, TEXT("%s utilise %s sur %s"),
-                *Caster->GetName(),
-                *Spec.Ability->AbilityName.ToString(),
-                *Tgt->GetName());
+            for (ACustomCharacter* Tgt : Targets)
+            {
+                FAbilityEffectContext Ctx;
+                Ctx.Source = Caster;
+                Ctx.Target = Tgt;
+                Ctx.Ability = Spec.Ability;
+
+                EffectData->ApplyEffect(Ctx);
+            }
         }
     }
+
+
 }
 
 void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const

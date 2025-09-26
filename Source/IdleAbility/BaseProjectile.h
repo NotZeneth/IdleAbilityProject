@@ -8,7 +8,7 @@
 
 class ACustomCharacter;
 class UAbilityData;
-class UAbilityEffect;
+class UAbilityEffectData;
 class UBoxComponent;
 
 UENUM(BlueprintType)
@@ -33,30 +33,28 @@ protected:
 public:
     virtual void Tick(float DeltaTime) override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     USceneComponent* Root;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     UBoxComponent* Collision;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     UStaticMeshComponent* Mesh;
 
-
-    // ---- Data ----
     UPROPERTY()
-    ACustomCharacter* Source;
+    ACustomCharacter* Source = nullptr;
 
     UPROPERTY()
-    ACustomCharacter* Target;
+    ACustomCharacter* Target = nullptr;
 
     UPROPERTY()
-    const UAbilityData* AbilityData;
+    const UAbilityData* Ability = nullptr;
 
     UPROPERTY()
-    TArray<UAbilityEffect*> EffectsOnHit;
+    TArray<UAbilityEffectData*> EffectsOnHit;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile");
     float ProjectileSpeed = 2000.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
@@ -64,17 +62,25 @@ public:
 
     FVector InitialDirection;
 
-    // Orientation helpers
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
     bool bRotateToVelocity = true;
 
-    // Si ton mesh ne pointe pas sur +X, mets un offset (ex: 90 si ton mesh pointe +Y)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
     float MeshYawOffsetDeg = 0.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    float TimeBeforeSelfDestruct = 20.f;
+
+    void RedirectToTarget(ACustomCharacter* NewTarget);
+
+    FTimerHandle LifeTimerHandle;
+    void DestroyProjectile();
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bounce")
+    int32 RemainingBounces = 0;
+
 
 private:
-
     UFUNCTION()
     void OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,

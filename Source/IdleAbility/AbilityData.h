@@ -1,11 +1,13 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "CustomCharacter.h" // pour l'enum dmg type
+#include "CustomCharacter.h" 
 #include "AbilityData.generated.h"
 
-class UAbilityEffect;
+class UAbilityEffectData;
 
 UENUM(BlueprintType)
 enum class EAbilityTriggerType : uint8
@@ -60,12 +62,11 @@ public:
     EAbilityTargeting Targeting = EAbilityTargeting::SingleNearestEnemy;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting!=EAbilityTargeting::Self"))
-    float Range = 2000.f; // rayon de recherche
+    float Range = 2000.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting==EAbilityTargeting::RandomEnemies", ClampMin = "1"))
     int32 TargetCount = 1;
 
-    // ---- Effets (data-driven) ----
-    UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Effects")
-    TArray<UAbilityEffect*> Effects; // ex: Damage, Heal, Buff, etc.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+    TArray<UAbilityEffectData*> Effects;
 };

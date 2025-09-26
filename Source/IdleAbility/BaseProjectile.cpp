@@ -4,26 +4,21 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CustomCharacter.h"
-#include "AbilityEffect.h"
+#include "AbilityEffectData.h"
 #include "AbilityData.h"
 
 ABaseProjectile::ABaseProjectile()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // Root
     Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     RootComponent = Root;
 
-    // Collision
     Collision = CreateDefaultSubobject<UBoxComponent>(TEXT("Collision"));
     Collision->SetupAttachment(Root);
-    Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic")); // ou ton custom preset
-
-
+    Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
     Collision->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlap);
 
-    // Mesh
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
     Mesh->SetupAttachment(Collision);
     Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -48,8 +43,16 @@ void ABaseProjectile::BeginPlay()
         Rot.Yaw += MeshYawOffsetDeg;
         SetActorRotation(Rot);
     }
-}
 
+    // Démarre le timer qui appelle DestroyProjectile après LifeTime secondes
+    GetWorld()->GetTimerManager().SetTimer(
+        LifeTimerHandle,
+        this,
+        &ABaseProjectile::DestroyProjectile,
+        TimeBeforeSelfDestruct,
+        false
+    );
+}
 
 void ABaseProjectile::Tick(float DeltaTime)
 {
@@ -61,14 +64,19 @@ void ABaseProjectile::Tick(float DeltaTime)
     {
     case EProjectileMovementType::TowardTarget:
     case EProjectileMovementType::Forward:
-        break; // déjà défini dans InitialDirection
+        break; // Already set in BeginPlay
     case EProjectileMovementType::Homing:
         if (Target && Target->IsAlive())
         {
             MoveDir = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         }
+        else
+        {
+            MovementType = EProjectileMovementType::Forward; // Fallback
+        }
         break;
     }
+
     SetActorLocation(GetActorLocation() + MoveDir * ProjectileSpeed * DeltaTime, true);
 
     if (bRotateToVelocity)
@@ -78,37 +86,52 @@ void ABaseProjectile::Tick(float DeltaTime)
         SetActorRotation(Rot);
     }
 
-    InitialDirection = MoveDir; // garde la dernière direction
+    InitialDirection = MoveDir; // Keep last valid direction
 }
 
-
-
 void ABaseProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-    bool bFromSweep, const FHitResult& SweepResult)
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (Source == nullptr) return;
-    if (OtherActor == Source) return;
+    if (!Source || OtherActor == Source) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("[Projectile %s] Hit %s (Source=%s) | NbEffects=%d"),
-        *GetName(),
-        *OtherActor->GetName(),
-        Source ? *Source->GetName() : TEXT("null"),
-        EffectsOnHit.Num());
-
-
-    ACustomCharacter* HitCharacter = Cast<ACustomCharacter>(OtherActor);
-    if (HitCharacter && HitCharacter != Source)
+    ACustomCharacter* HitChar = Cast<ACustomCharacter>(OtherActor);
+    if (HitChar && HitChar->IsAlive())
     {
-        FAbilityEffectContext Ctx(Source, HitCharacter, AbilityData, this);
-
-        for (UAbilityEffect* Effect : EffectsOnHit)
+        for (const UAbilityEffectData* Effect : EffectsOnHit)
         {
             if (Effect && Effect->TriggerPhase == EEffectTriggerPhase::OnHit)
             {
+                FAbilityEffectContext Ctx;
+                Ctx.Source = Source;
+                Ctx.Target = HitChar;
+                Ctx.Ability = Ability;
+                Ctx.Projectile = this;
+
                 Effect->ApplyEffect(Ctx);
             }
         }
-
     }
+}
+
+void ABaseProjectile::RedirectToTarget(ACustomCharacter* NewTarget) 
+{
+    if (!NewTarget) return;
+
+    Target = NewTarget;
+
+    // recalcul d’une direction valide et on force un comportement "homing"
+    MovementType = EProjectileMovementType::Homing;
+    InitialDirection = (NewTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+    if (bRotateToVelocity)
+    {
+        FRotator Rot = InitialDirection.Rotation();
+        Rot.Yaw += MeshYawOffsetDeg;
+        SetActorRotation(Rot);
+    }
+}
+
+void ABaseProjectile::DestroyProjectile()
+{
+    Destroy();
 }

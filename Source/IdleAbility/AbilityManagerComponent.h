@@ -1,4 +1,4 @@
-// AbilityManagerComponent.h
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -12,12 +12,13 @@ struct FAbilitySpec
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowedClasses = "AbilityData"))
     UAbilityData* Ability = nullptr;
 
-    // Temps où le cooldown se termine
     float CooldownEndTime = 0.f;
+    float CooldownScalar = 1.f;
 };
+
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class IDLEABILITY_API UAbilityManagerComponent : public UActorComponent
