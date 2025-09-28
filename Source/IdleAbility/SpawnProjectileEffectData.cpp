@@ -7,7 +7,34 @@
 
 bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
-    if (!ProjectileClass || !Context.Source) return true;
+    if (ProjectileOptions.Num() == 0 || !Context.Source)
+        return false;
+
+    // Choix du projectile selon les poids
+    float TotalWeight = 0.f;
+    for (const FWeightedProjectile& Opt : ProjectileOptions)
+    {
+        if (Opt.ProjectileClass)
+            TotalWeight += FMath::Max(0.f, Opt.Weight);
+    }
+    if (TotalWeight <= 0.f)
+        return false;
+
+    float Roll = FMath::FRandRange(0.f, TotalWeight);
+    const FWeightedProjectile* Chosen = nullptr;
+
+    for (const FWeightedProjectile& Opt : ProjectileOptions)
+    {
+        if (!Opt.ProjectileClass) continue;
+        Roll -= FMath::Max(0.f, Opt.Weight);
+        if (Roll <= 0.f)
+        {
+            Chosen = &Opt;
+            break;
+        }
+    }
+
+    if (!Chosen) return false;
 
     FActorSpawnParameters Params;
     Params.Owner = Context.Source;
@@ -16,20 +43,24 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     FVector SpawnLoc = Context.Source->GetActorLocation() + FVector(0, 0, 50);
     FRotator SpawnRot = Context.Source->GetActorRotation();
 
-    ABaseProjectile* Proj = Context.Source->GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, SpawnLoc, SpawnRot, Params);
+    ABaseProjectile* Proj = Context.Source->GetWorld()->SpawnActor<ABaseProjectile>(
+        Chosen->ProjectileClass, SpawnLoc, SpawnRot, Params);
+
     if (Proj)
     {
         Proj->Source = Context.Source;
         Proj->Target = Context.Target;
         Proj->Ability = Context.Ability;
-        Proj->EffectsOnHit = SubEffects;
 
-        Proj->RemainingBounces = Context.Source->MaxBounces; // Bon ca, autant le donner car p'tet un projectile devient bounce + tard, better safe
+        // On prend d’abord les extra, puis les subeffects "communs" déjà présents
+        Proj->EffectsOnHit = Chosen->ExtraSubEffects;
+        Proj->EffectsOnHit.Append(SubEffects);
 
-        UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] %s a lancé un projectile %s"),
+        Proj->RemainingBounces = Context.Source->MaxBounces;
+
+        UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] %s a lancé %s"),
             *Context.Source->GetName(),
-            *ProjectileClass->GetName());
+            *Chosen->ProjectileClass->GetName());
     }
-
     return true;
 }

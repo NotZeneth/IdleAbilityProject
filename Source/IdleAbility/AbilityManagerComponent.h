@@ -66,4 +66,7 @@ public:
     UPROPERTY() 
     TMap<const UAbilityData*, float> LastFrenzyTimes;
 
+    UPROPERTY()
+    TArray<ACustomCharacter*> PendingRemovals;
+
 };

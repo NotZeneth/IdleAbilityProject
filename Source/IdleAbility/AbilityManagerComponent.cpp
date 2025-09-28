@@ -30,6 +30,8 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
     }
 
     // Gestion des effets persistants (DOT, buffs, debuffs…)
+    TArray<ACustomCharacter*> TargetsToRemove;
+
     for (auto& Pair : ActiveEffects)
     {
         ACustomCharacter* Target = Pair.Key;
@@ -38,50 +40,75 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
         TArray<FAbilityEffectSpec>& Effects = Pair.Value;
 
-        for (int32 i = Effects.Num() - 1; i >= 0; --i)
-        {
-            FAbilityEffectSpec& Spec = Effects[i];
-            const UAbilityEffectData* Data = Spec.EffectData;
-            if (!Data) { Effects.RemoveAt(i); continue; }
-
-            const float TickEvery = FMath::Max(0.01f, Data->TickInterval);
-
-            Spec.TimeRemaining -= DeltaTime;
-            Spec.TimeSinceLastTick += DeltaTime;
-
-            if (TickEvery > 0.f)
+        Effects.RemoveAll([&](FAbilityEffectSpec& Spec)
             {
-                while (Spec.TimeSinceLastTick >= TickEvery && Spec.TimeRemaining > 0.f)
-                {
-                    Spec.TimeSinceLastTick -= TickEvery;
-                    Data->ApplyEffect(Spec.Context);
-                }
-            }
+                const UAbilityEffectData* Data = Spec.EffectData;
+                if (!Data) return true;
 
-            if (Spec.TimeRemaining <= 0.f)
-            {
-                // Déclenche les sous-effets OnExpire
-                for (const UAbilityEffectData* Sub : Data->SubEffects)
+                const float TickEvery = FMath::Max(0.01f, Data->TickInterval);
+
+                Spec.TimeRemaining -= DeltaTime;
+                Spec.TimeSinceLastTick += DeltaTime;
+
+                // Tick périodique
+                if (TickEvery > 0.f)
                 {
-                    if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
+                    while (Spec.TimeSinceLastTick >= TickEvery && Spec.TimeRemaining > 0.f)
                     {
-                        UE_LOG(LogTemp, Warning, TEXT("[Expire] Déclenche sous-effet %s sur %s"),
-                            *Sub->GetClass()->GetName(),
-                            Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
-
-                        Sub->ApplyEffect(Spec.Context);
+                        Spec.TimeSinceLastTick -= TickEvery;
+                        Data->ApplyEffect(Spec.Context);
                     }
                 }
 
-                UE_LOG(LogTemp, Log, TEXT("[Manager] Expiration de %s sur %s"),
-                    *Data->GetClass()->GetName(),
-                    Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
+                // Expiration
+                if (Spec.TimeRemaining <= 0.f)
+                {
+                    // Déclenche les sous-effets OnExpire
+                    for (const UAbilityEffectData* Sub : Data->SubEffects)
+                    {
+                        if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("[Expire] Déclenche sous-effet %s sur %s"),
+                                *Sub->GetClass()->GetName(),
+                                Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
 
-                Effects.RemoveAt(i);
-            }
+                            Sub->ApplyEffect(Spec.Context);
+                        }
+                    }
+
+                    UE_LOG(LogTemp, Log, TEXT("[Manager] Expiration de %s sur %s"),
+                        *Data->GetClass()->GetName(),
+                        Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
+
+                    return true; // supprimer cet effet
+                }
+
+                return false; // garder
+            });
+
+        if (Effects.Num() == 0)
+        {
+            TargetsToRemove.Add(Target); // suppression différée
         }
     }
+
+    // Nettoyage des cibles vides après l’itération (safe)
+    for (ACustomCharacter* Tgt : TargetsToRemove)
+    {
+        ActiveEffects.Remove(Tgt);
+    }
+
+    if (PendingRemovals.Num() > 0)
+    {
+        for (ACustomCharacter* Dead : PendingRemovals)
+        {
+            ActiveEffects.Remove(Dead);
+        }
+        PendingRemovals.Reset();
+    }
 }
+
+
 
 bool UAbilityManagerComponent::IsAbilityReady(const FAbilitySpec& Spec) const
 {
@@ -233,9 +260,11 @@ void UAbilityManagerComponent::GetEnemiesInRange(const ACustomCharacter* Origin,
 void UAbilityManagerComponent::OnEnemyKilled(AEnemyCharacter* DeadEnemy)
 {
     if (!DeadEnemy) return;
-    UE_LOG(LogTemp, Log, TEXT("[Manager] Cleanup des effets persistants sur %s"), *DeadEnemy->GetName());
-    ActiveEffects.Remove(DeadEnemy);
+
+    UE_LOG(LogTemp, Log, TEXT("[Manager] Cleanup différé des effets persistants sur %s"), *DeadEnemy->GetName());
+    PendingRemovals.Add(DeadEnemy);
 }
+
 
 void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* EffectData, const FAbilityEffectContext& Context)
 {
