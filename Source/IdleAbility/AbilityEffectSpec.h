@@ -9,21 +9,27 @@
 USTRUCT(BlueprintType)
 struct FAbilityEffectSpec
 {
-    GENERATED_BODY();
+    GENERATED_BODY()
 
-    // Référence vers la data
     UPROPERTY()
     const UAbilityEffectData* EffectData = nullptr;
 
-    // Contexte d’application
+    UPROPERTY()
     FAbilityEffectContext Context;
 
-    // Runtime : exemple durée restante (modifiable par les sous-classes)
+    // Durée restante (0 = instantané)
     float TimeRemaining = 0.f;
+
+    // Pour accumuler le temps entre ticks (si durée > 0)
+    float TimeSinceLastTick = 0.f;
 
     FAbilityEffectSpec() {}
     FAbilityEffectSpec(const UAbilityEffectData* InData, const FAbilityEffectContext& InContext)
-        : EffectData(InData), Context(InContext)
+        : EffectData(InData), Context(InContext) {
+    }
+
+    bool operator==(const FAbilityEffectSpec& Other) const
     {
+        return EffectData == Other.EffectData && Context.Target == Other.Context.Target;
     }
 };

@@ -8,11 +8,11 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
-void UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
+bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
     ABaseProjectile* Projectile = Cast<ABaseProjectile>(Context.Projectile);
     if (!Projectile || !Context.Source || !Context.Target || !Context.Ability)
-        return;
+        return true;
 
     // Chance effective = stat joueur × multiplicateur
     float EffectiveChance = Context.Source->BounceChance * ChanceMultiplier;
@@ -24,7 +24,7 @@ void UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     {
         UE_LOG(LogTemp, Warning, TEXT("[Bounce] Bounce raté ou plus de bounces restants -> projectile détruit"));
         Projectile->Destroy();
-        return;
+        return true;
     }
 
     // Décrémente le compteur de rebonds
@@ -52,7 +52,7 @@ void UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     {
         UE_LOG(LogTemp, Warning, TEXT("[Bounce] Aucun candidat trouvé -> projectile détruit"));
         Projectile->Destroy();
-        return;
+        return true;
     }
 
     // Choisit une nouvelle cible aléatoire
@@ -61,7 +61,7 @@ void UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     {
         UE_LOG(LogTemp, Warning, TEXT("[Bounce] Nouvelle cible invalide -> projectile détruit"));
         Projectile->Destroy();
-        return;
+        return true;
     }
 
     // Redirige le projectile
@@ -73,4 +73,6 @@ void UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         *Context.Target->GetName(),
         *NewTarget->GetName(),
         Projectile->RemainingBounces);
+
+    return true;
 }

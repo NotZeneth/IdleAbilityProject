@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "AbilityData.h"
+#include "AbilityEffectSpec.h"
 #include "AbilityManagerComponent.generated.h"
 
+// Spécifie une ability équipée par le joueur
 USTRUCT(BlueprintType)
 struct FAbilitySpec
 {
@@ -18,7 +20,6 @@ struct FAbilitySpec
     float CooldownEndTime = 0.f;
     float CooldownScalar = 1.f;
 };
-
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class IDLEABILITY_API UAbilityManagerComponent : public UActorComponent
@@ -45,13 +46,24 @@ public:
     // Vérifie cooldown
     bool IsAbilityReady(const FAbilitySpec& Spec) const;
 
-public:
     void ExecuteAbility(const FAbilitySpec& Spec);
 
-    // Renvoie les cibles en fonction du Targeting du DataAsset
     void FindTargets(const UAbilityData* Ability, class ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const;
 
     UFUNCTION(BlueprintCallable, Category = "Abilities")
     void GetEnemiesInRange(const class ACustomCharacter* Origin, float Range, TArray<class ACustomCharacter*>& Out) const;
+
+    // ---- Effets persistants (DOTs, Frenzy, etc.) ----
+    TMap<ACustomCharacter*, TArray<FAbilityEffectSpec>> ActiveEffects;
+
+    UFUNCTION()
+    void OnEnemyKilled(class AEnemyCharacter* DeadEnemy);
+
+    // Pour appliquer un effet et gérer les persistants
+    void ApplyEffectToTarget(const UAbilityEffectData* EffectData, const FAbilityEffectContext& Context);
+
+    // Pour frenzy
+    UPROPERTY() 
+    TMap<const UAbilityData*, float> LastFrenzyTimes;
 
 };

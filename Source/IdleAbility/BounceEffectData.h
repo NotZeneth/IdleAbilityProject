@@ -20,5 +20,5 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bounce")
     float BounceRangeOverride = 1000.f;
 
-    virtual void ApplyEffect(const FAbilityEffectContext& Context) const override;
+    virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };

@@ -27,59 +27,42 @@ protected:
 
 public:
     virtual void Tick(float DeltaTime) override;
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Faction")
+    // --- Stats de base ---
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 TeamId = 0;
 
-public:
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MaxHP;
+    float MaxHP = 100.f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-    float CurrentHP;
+    float CurrentHP = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float HpRegenPercent; // %  regen par sec
+    float HpRegenPercent = 0.f; // % par seconde
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float Attack;
-
-public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float PhysicalDmgReduction; // 0.2 = 20% reduc
+    float Attack = 10.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MagicalDmgReduction;
+    float PhysicalDmgReduction = 0.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float IgnoreDmgReduction;
+    float MagicalDmgReduction = 0.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float CooldownReduction; // Can be negative, increasing cooldown
+    float IgnoreDmgReduction = 0.f;
 
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    void RegenHealthOverTime(float DeltaTime);
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float CooldownReduction = 0.f; // peut être négatif
 
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source);
-
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    void Heal(float HealAmount);
-
-    UFUNCTION(BlueprintCallable, Category = "Stats")
-    bool IsAlive();
-
-public:
-
+    // --- Effets secondaires ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float MultishotChance = 0.1f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 MultishotAmount = 2;
-
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float BounceChance = 0.1f;
@@ -89,4 +72,17 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float FrenzyChance = 0.05f;
+
+    // --- Combat ---
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void RegenHealthOverTime(float DeltaTime);
+
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source);
+
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void Heal(float HealAmount);
+
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    bool IsAlive();
 };

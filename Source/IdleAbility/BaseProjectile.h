@@ -79,7 +79,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bounce")
     int32 RemainingBounces = 0;
 
-
 private:
     UFUNCTION()
     void OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,

@@ -20,7 +20,6 @@ public:
     UPROPERTY()
     TArray<UAbilityEffectData*> EffectsOnHit;
 
-    virtual void ApplyEffect(const FAbilityEffectContext& Context) const override;
-
+    virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
     
 };

@@ -1,10 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "AbilityManagerComponent.h"
 #include "CustomCharacter.h"
+#include "EnemyCharacter.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
-#include "AbilityEffectData.h"
 #include "Algo/RandomShuffle.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
@@ -21,13 +19,66 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    // Auto abilities
+    // Gestion des abilities auto
     for (int32 i = 0; i < EquippedAbilities.Num(); i++)
     {
         FAbilitySpec& Spec = EquippedAbilities[i];
         if (Spec.Ability && Spec.Ability->TriggerType == EAbilityTriggerType::Auto)
         {
             TryActivateAbility(i);
+        }
+    }
+
+    // Gestion des effets persistants (DOT, buffs, debuffs…)
+    for (auto& Pair : ActiveEffects)
+    {
+        ACustomCharacter* Target = Pair.Key;
+        if (!Target || !Target->IsAlive())
+            continue;
+
+        TArray<FAbilityEffectSpec>& Effects = Pair.Value;
+
+        for (int32 i = Effects.Num() - 1; i >= 0; --i)
+        {
+            FAbilityEffectSpec& Spec = Effects[i];
+            const UAbilityEffectData* Data = Spec.EffectData;
+            if (!Data) { Effects.RemoveAt(i); continue; }
+
+            const float TickEvery = FMath::Max(0.01f, Data->TickInterval);
+
+            Spec.TimeRemaining -= DeltaTime;
+            Spec.TimeSinceLastTick += DeltaTime;
+
+            if (TickEvery > 0.f)
+            {
+                while (Spec.TimeSinceLastTick >= TickEvery && Spec.TimeRemaining > 0.f)
+                {
+                    Spec.TimeSinceLastTick -= TickEvery;
+                    Data->ApplyEffect(Spec.Context);
+                }
+            }
+
+            if (Spec.TimeRemaining <= 0.f)
+            {
+                // Déclenche les sous-effets OnExpire
+                for (const UAbilityEffectData* Sub : Data->SubEffects)
+                {
+                    if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
+                    {
+                        UE_LOG(LogTemp, Warning, TEXT("[Expire] Déclenche sous-effet %s sur %s"),
+                            *Sub->GetClass()->GetName(),
+                            Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
+
+                        Sub->ApplyEffect(Spec.Context);
+                    }
+                }
+
+                UE_LOG(LogTemp, Log, TEXT("[Manager] Expiration de %s sur %s"),
+                    *Data->GetClass()->GetName(),
+                    Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
+
+                Effects.RemoveAt(i);
+            }
         }
     }
 }
@@ -49,16 +100,15 @@ void UAbilityManagerComponent::TryActivateAbility(int32 AbilityIndex)
 
     ExecuteAbility(Spec);
 
-    // Cooldown ajusté par la stat
+    // Cooldown ajusté
     float BaseCd = Spec.Ability->Cooldown;
-    float Scalar = Spec.CooldownScalar; // Modif runtime par des ability comme frenzy
+    float Scalar = Spec.CooldownScalar;
     float Cdr = 1.f - Caster->CooldownReduction;
 
     float FinalCooldown = BaseCd * Scalar * Cdr;
     if (FinalCooldown < 0.1f) FinalCooldown = 0.05f;
 
     Spec.CooldownEndTime = GetWorld()->TimeSeconds + FinalCooldown;
-
 }
 
 void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
@@ -68,11 +118,11 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
     ACustomCharacter* Caster = Cast<ACustomCharacter>(GetOwner());
     if (!Caster) return;
 
-    // 1) Trouver les cibles depuis la data
+    // Trouver les cibles
     TArray<ACustomCharacter*> Targets;
     FindTargets(Spec.Ability, Caster, Targets);
 
-    // Self-case: si Targeting=Self et aucune cible
+    // Self-case
     if (Spec.Ability->Targeting == EAbilityTargeting::Self && Targets.Num() == 0)
     {
         Targets.Add(Caster);
@@ -85,44 +135,36 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
         return;
     }
 
+    // Appliquer les effets OnCast
     for (UAbilityEffectData* EffectData : Spec.Ability->Effects)
     {
-        if (!EffectData) continue;
+        if (!EffectData || EffectData->TriggerPhase != EEffectTriggerPhase::OnCast)
+            continue;
 
-        if (EffectData->TriggerPhase == EEffectTriggerPhase::OnCast)
+        for (ACustomCharacter* Tgt : Targets)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[Ability] Trouvé effet %s (Phase=%s) dans %s"),
-                *EffectData->GetClass()->GetName(),
-                *UEnum::GetValueAsString(EffectData->TriggerPhase),
-                *Spec.Ability->AbilityName.ToString());
+            FAbilityEffectContext Ctx;
+            Ctx.Source = Caster;
+            Ctx.Target = Tgt;
+            Ctx.Ability = Spec.Ability;
+            Ctx.Projectile = nullptr;
 
-            for (ACustomCharacter* Tgt : Targets)
-            {
-                FAbilityEffectContext Ctx;
-                Ctx.Source = Caster;
-                Ctx.Target = Tgt;
-                Ctx.Ability = Spec.Ability;
-
-                EffectData->ApplyEffect(Ctx);
-            }
+            ApplyEffectToTarget(EffectData, Ctx);
         }
     }
-
-
 }
 
 void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomCharacter* Caster, TArray<ACustomCharacter*>& OutTargets) const
 {
     if (!Ability || !Caster) return;
 
-    // Collecte brute des ennemis potentiels
+    // Collecte brute des ennemis
     TArray<ACustomCharacter*> Candidates;
     for (TActorIterator<ACustomCharacter> It(GetWorld()); It; ++It)
     {
         ACustomCharacter* C = *It;
         if (!C || C == Caster) continue;
 
-        // Filtre "ennemi" par TeamId
         if (C->TeamId == Caster->TeamId) continue;
 
         Candidates.Add(C);
@@ -179,7 +221,6 @@ void UAbilityManagerComponent::GetEnemiesInRange(const ACustomCharacter* Origin,
         if (!C || C == Origin) continue;
         if (!C->IsAlive()) continue;
 
-        // Ennemis seulement (si tu as TeamId)
         if (C->TeamId == Origin->TeamId) continue;
 
         if (FVector::DistSquared(C->GetActorLocation(), Origin->GetActorLocation()) <= RangeSq)
@@ -187,4 +228,44 @@ void UAbilityManagerComponent::GetEnemiesInRange(const ACustomCharacter* Origin,
             Out.Add(C);
         }
     }
+}
+
+void UAbilityManagerComponent::OnEnemyKilled(AEnemyCharacter* DeadEnemy)
+{
+    if (!DeadEnemy) return;
+    UE_LOG(LogTemp, Log, TEXT("[Manager] Cleanup des effets persistants sur %s"), *DeadEnemy->GetName());
+    ActiveEffects.Remove(DeadEnemy);
+}
+
+void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* EffectData, const FAbilityEffectContext& Context)
+{
+    if (!EffectData) return;
+
+    if (EffectData->Duration <= 0.f)
+    {
+        // Instantané
+        EffectData->ApplyEffect(Context);
+        return;
+    }
+
+    // Persistant -> appliquer une fois
+    if (!EffectData->ApplyEffect(Context))
+    {
+        // Si l’effet a "raté" (Frenzy roll fail, etc.), on ne range rien
+        return;
+    }
+
+    FAbilityEffectSpec NewSpec(EffectData, Context);
+    NewSpec.TimeRemaining = EffectData->Duration;
+
+    // Reset timer après le tick initial
+    NewSpec.TimeSinceLastTick = 0.f;
+
+    ActiveEffects.FindOrAdd(Context.Target).Add(NewSpec);
+
+    UE_LOG(LogTemp, Log, TEXT("[Manager] Effet persistant %s posé sur %s (Duration=%.2fs, Tick=%.2fs)"),
+        *EffectData->GetClass()->GetName(),
+        Context.Target ? *Context.Target->GetName() : TEXT("null"),
+        NewSpec.TimeRemaining,
+        EffectData->TickInterval);
 }

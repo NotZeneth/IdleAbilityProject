@@ -7,20 +7,20 @@
 #include "SpawnProjectileEffectData.h"
 #include "Algo/RandomShuffle.h"
 
-void UMultishotEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
+bool UMultishotEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
     ACustomCharacter* Caster = Context.Source;
-    if (!Caster || !Context.Ability) return;
+    if (!Caster || !Context.Ability) return true;
 
     UAbilityManagerComponent* Manager = Caster->FindComponentByClass<UAbilityManagerComponent>();
-    if (!Manager) return;
+    if (!Manager) return true;
 
     // Roll chance
     float TotalChance = Caster->MultishotChance * ChanceMultiplier;
     if (FMath::FRand() > TotalChance)
     {
         UE_LOG(LogTemp, Warning, TEXT("[Multishot] Raté (chance=%.2f)"), TotalChance);
-        return;
+        return true;
     }
 
     // Collecter les ennemis en range
@@ -36,7 +36,7 @@ void UMultishotEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
     if (Candidates.Num() == 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("[Multishot] Pas d'autres cibles en range"));
-        return;
+        return true;
     }
 
     // Mélanger aléatoirement
@@ -67,4 +67,6 @@ void UMultishotEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
             }
         }
     }
+
+    return true;
 }

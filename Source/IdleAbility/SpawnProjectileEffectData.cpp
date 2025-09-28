@@ -5,9 +5,9 @@
 #include "CustomCharacter.h"
 #include "Engine/World.h"
 
-void USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
+bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
-    if (!ProjectileClass || !Context.Source) return;
+    if (!ProjectileClass || !Context.Source) return true;
 
     FActorSpawnParameters Params;
     Params.Owner = Context.Source;
@@ -30,4 +30,6 @@ void USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
             *Context.Source->GetName(),
             *ProjectileClass->GetName());
     }
+
+    return true;
 }

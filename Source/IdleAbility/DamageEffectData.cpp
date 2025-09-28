@@ -4,10 +4,10 @@
 #include "CustomCharacter.h"
 #include "AbilityData.h"
 
-void UDamageEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
+bool UDamageEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
     if (!Context.Source || !Context.Target || !Context.Target->IsAlive())
-        return;
+        return true;
 
     // Dégâts = attaque du joueur × multiplicateur
     float FinalDamage = Context.Source->Attack * DamageMultiplier;
@@ -19,4 +19,6 @@ void UDamageEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         FinalDamage,
         *Context.Target->GetName(),
         *Context.Ability->AbilityName.ToString());
+
+    return true;
 }

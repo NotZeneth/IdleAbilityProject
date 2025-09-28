@@ -45,14 +45,18 @@ class IDLEABILITY_API UAbilityEffectData : public UDataAsset
     GENERATED_BODY()
 
 public:
-    // Quand l’effet doit s’appliquer
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
     EEffectTriggerPhase TriggerPhase = EEffectTriggerPhase::OnCast;
 
-    // Effets enfants (modularité)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Over Time")
+    float Duration = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Over Time")
+    float TickInterval = 1.f;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
     TArray<UAbilityEffectData*> SubEffects;
 
-    // Point d’extension : chaque sous-classe (Damage, Dot, etc.) va override ça
-    virtual void ApplyEffect(const FAbilityEffectContext& Context) const {}
+    virtual bool ApplyEffect(const FAbilityEffectContext& Context) const { return true; }
 };
+

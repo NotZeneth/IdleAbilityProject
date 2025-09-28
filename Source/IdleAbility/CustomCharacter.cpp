@@ -2,25 +2,19 @@
 
 
 #include "CustomCharacter.h"
-///
 #include "TimerManager.h"
 
-
-// Sets default values
 ACustomCharacter::ACustomCharacter()
 {
-    // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 }
 
-// Called when the game starts or when spawned
 void ACustomCharacter::BeginPlay()
 {
     Super::BeginPlay();
     CurrentHP = MaxHP;
 }
 
-// Called every frame
 void ACustomCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -52,23 +46,25 @@ void ACustomCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
     if (DamageType == EDamageType::Physical)
     {
         float EffectiveReduction = PhysicalDmgReduction - IgnoreDmgReduction;
-        if (EffectiveReduction < 0) EffectiveReduction = 0; // A retirer si on veut malus une defense negative.
+        if (EffectiveReduction < 0) EffectiveReduction = 0;
         FinalDamage *= (1.f - EffectiveReduction);
     }
     else if (DamageType == EDamageType::Magical)
     {
         float EffectiveReduction = MagicalDmgReduction - IgnoreDmgReduction;
-        if (EffectiveReduction < 0) EffectiveReduction = 0; // A retirer si on veut malus une defense negative.
+        if (EffectiveReduction < 0) EffectiveReduction = 0;
         FinalDamage *= (1.f - EffectiveReduction);
     }
     // Pure = pas de réduction
 
     CurrentHP = FMath::Clamp(CurrentHP - FinalDamage, 0.f, MaxHP);
-    UE_LOG(LogTemp, Warning, TEXT("New health is %f"), CurrentHP);
+    UE_LOG(LogTemp, Warning, TEXT("%s a maintenant %f HP"), *GetName(), CurrentHP);
 
     if (!IsAlive())
     {
         UE_LOG(LogTemp, Warning, TEXT("%s est mort !"), *GetName());
+        // IMPORTANT : on NE détruit PAS ici.
+        // EnemyCharacter s’en charge (notification + Destroy()).
     }
 }
 
@@ -77,9 +73,7 @@ bool ACustomCharacter::IsAlive()
     return CurrentHP > 0.f;
 }
 
-// Called to bind functionality to input
 void ACustomCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }

@@ -6,6 +6,7 @@
 #include "CustomCharacter.h"
 #include "AbilityEffectData.h"
 #include "AbilityData.h"
+#include "AbilityManagerComponent.h"
 
 ABaseProjectile::ABaseProjectile()
 {
@@ -89,26 +90,33 @@ void ABaseProjectile::Tick(float DeltaTime)
     InitialDirection = MoveDir; // Keep last valid direction
 }
 
+// Base projectile s'occupe de trigger le on hit effect
 void ABaseProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (!Source || OtherActor == Source) return;
 
-    ACustomCharacter* HitChar = Cast<ACustomCharacter>(OtherActor);
-    if (HitChar && HitChar->IsAlive())
+    ACustomCharacter* HitCharacter = Cast<ACustomCharacter>(OtherActor);
+    if (HitCharacter && HitCharacter != Source && HitCharacter->IsAlive())
     {
-        for (const UAbilityEffectData* Effect : EffectsOnHit)
-        {
-            if (Effect && Effect->TriggerPhase == EEffectTriggerPhase::OnHit)
-            {
-                FAbilityEffectContext Ctx;
-                Ctx.Source = Source;
-                Ctx.Target = HitChar;
-                Ctx.Ability = Ability;
-                Ctx.Projectile = this;
+        UAbilityManagerComponent* Manager =
+            Source ? Source->FindComponentByClass<UAbilityManagerComponent>() : nullptr;
 
-                Effect->ApplyEffect(Ctx);
-            }
+        for (UAbilityEffectData* Effect : EffectsOnHit) // ou SubEffects si tu utilises ça
+        {
+            if (!Effect || Effect->TriggerPhase != EEffectTriggerPhase::OnHit)
+                continue;
+
+            FAbilityEffectContext Ctx;
+            Ctx.Source = Source;
+            Ctx.Target = HitCharacter;
+            Ctx.Ability = Ability;
+            Ctx.Projectile = this;
+
+            if (Manager)
+                Manager->ApplyEffectToTarget(Effect, Ctx);  // gère instantané + persistant
+            else
+                Effect->ApplyEffect(Ctx); // fallback (pas de persistance si pas de manager)
         }
     }
 }

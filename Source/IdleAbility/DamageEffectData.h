@@ -16,5 +16,5 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
     float DamageMultiplier = 1.0f;
 
-    virtual void ApplyEffect(const FAbilityEffectContext& Context) const override;
+    virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };
