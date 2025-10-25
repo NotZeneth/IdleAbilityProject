@@ -23,6 +23,9 @@ void ACustomCharacter::Tick(float DeltaTime)
     {
         RegenHealthOverTime(DeltaTime);
     }
+
+    if (isFrozen)
+        return; // Stop movement / behavior
 }
 
 void ACustomCharacter::RegenHealthOverTime(float DeltaTime)
@@ -57,6 +60,7 @@ void ACustomCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
     }
     // Pure = pas de réduction
 
+    FinalDamage *= (1.f + DamageTakenBonus);
     CurrentHP = FMath::Clamp(CurrentHP - FinalDamage, 0.f, MaxHP);
     UE_LOG(LogTemp, Warning, TEXT("%s a maintenant %f HP"), *GetName(), CurrentHP);
 

@@ -85,4 +85,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Stats")
     bool IsAlive();
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
+    bool isFrozen = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
+    float DamageTakenBonus = 0.f; // 0 = normal, 0.5 = +50% dmg
+
 };

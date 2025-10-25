@@ -40,7 +40,7 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     Params.Owner = Context.Source;
     Params.Instigator = Context.Source;
 
-    FVector SpawnLoc = Context.Source->GetActorLocation() + FVector(0, 0, 50);
+    FVector SpawnLoc = Context.Source->GetActorLocation() + Chosen->SpawnOffset;
     FRotator SpawnRot = Context.Source->GetActorRotation();
 
     ABaseProjectile* Proj = Context.Source->GetWorld()->SpawnActor<ABaseProjectile>(
