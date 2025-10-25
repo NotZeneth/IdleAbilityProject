@@ -21,10 +21,6 @@ struct FWeightedProjectile
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
     TArray<UAbilityEffectData*> ExtraSubEffects;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
-    FVector SpawnOffset = FVector(0.f, 0.f, 50.f);
-
 };
 
 UCLASS(BlueprintType)

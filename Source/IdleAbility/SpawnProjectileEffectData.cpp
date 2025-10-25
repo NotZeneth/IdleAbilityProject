@@ -10,7 +10,6 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     if (ProjectileOptions.Num() == 0 || !Context.Source)
         return false;
 
-    // Choix du projectile selon les poids
     float TotalWeight = 0.f;
     for (const FWeightedProjectile& Opt : ProjectileOptions)
     {
@@ -40,27 +39,26 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     Params.Owner = Context.Source;
     Params.Instigator = Context.Source;
 
-    FVector SpawnLoc = Context.Source->GetActorLocation() + Chosen->SpawnOffset;
+    FVector SpawnLoc = Context.Source->GetActorLocation();
     FRotator SpawnRot = Context.Source->GetActorRotation();
 
     ABaseProjectile* Proj = Context.Source->GetWorld()->SpawnActor<ABaseProjectile>(
         Chosen->ProjectileClass, SpawnLoc, SpawnRot, Params);
 
-    if (Proj)
-    {
-        Proj->Source = Context.Source;
-        Proj->Target = Context.Target;
-        Proj->Ability = Context.Ability;
+    if (!Proj)
+        return false;
 
-        // On prend d’abord les extra, puis les subeffects "communs" déjà présents
-        Proj->EffectsOnHit = Chosen->ExtraSubEffects;
-        Proj->EffectsOnHit.Append(SubEffects);
+    // Application de l’offset défini dans le Blueprint du projectile
+    Proj->SetActorLocation(SpawnLoc + Proj->SpawnOffset);
 
-        Proj->RemainingBounces = Context.Source->MaxBounces;
+    Proj->Source = Context.Source;
+    Proj->Target = Context.Target;
+    Proj->Ability = Context.Ability;
 
-        UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] %s a lancé %s"),
-            *Context.Source->GetName(),
-            *Chosen->ProjectileClass->GetName());
-    }
+    Proj->EffectsOnHit = Chosen->ExtraSubEffects;
+    Proj->EffectsOnHit.Append(SubEffects);
+
+    Proj->RemainingBounces = Context.Source->MaxBounces;
+
     return true;
 }

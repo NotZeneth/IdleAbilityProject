@@ -79,6 +79,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bounce")
     int32 RemainingBounces = 0;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    FVector SpawnOffset = FVector(0.f, 0.f, 50.f);
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Homing")
     float MaxTurnRateDeg = 360.f; // degrés par seconde
 
