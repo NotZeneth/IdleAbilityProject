@@ -67,6 +67,9 @@ public:
     TMap<const UAbilityData*, float> LastFrenzyTimes;
 
     UPROPERTY()
+    TMap<const UAbilityEffectData*, int32> RetriggerCounts;
+
+    UPROPERTY()
     TArray<ACustomCharacter*> PendingRemovals;
 
 };

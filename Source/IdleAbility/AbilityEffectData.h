@@ -60,3 +60,4 @@ public:
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const { return true; }
 };
 
+
