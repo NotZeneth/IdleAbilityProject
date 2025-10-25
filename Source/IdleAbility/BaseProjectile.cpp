@@ -29,8 +29,18 @@ void ABaseProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (Target && MovementType == EProjectileMovementType::TowardTarget)
+    LockedY = GetActorLocation().Y;
+
+    if (Target && MovementType == EProjectileMovementType::Homing)
     {
+        // Tir en cloche au départ
+        const FVector Forward = GetActorForwardVector();
+        const FVector Up = FVector::UpVector;
+        InitialDirection = (Forward + Up * 0.6f).GetSafeNormal();
+    }
+    else if (Target && MovementType == EProjectileMovementType::TowardTarget)
+    {
+        // Direction initiale vers la cible
         InitialDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
     }
     else if (MovementType == EProjectileMovementType::Forward)
@@ -45,49 +55,66 @@ void ABaseProjectile::BeginPlay()
         SetActorRotation(Rot);
     }
 
-    // Démarre le timer qui appelle DestroyProjectile après LifeTime secondes
     GetWorld()->GetTimerManager().SetTimer(
-        LifeTimerHandle,
-        this,
-        &ABaseProjectile::DestroyProjectile,
-        TimeBeforeSelfDestruct,
-        false
-    );
+        LifeTimerHandle, this, &ABaseProjectile::DestroyProjectile, TimeBeforeSelfDestruct, false);
 }
+
 
 void ABaseProjectile::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    FVector MoveDir = InitialDirection;
-
+    // Direction mise à jour selon le type de mouvement
     switch (MovementType)
     {
-    case EProjectileMovementType::TowardTarget:
-    case EProjectileMovementType::Forward:
-        break; // Already set in BeginPlay
     case EProjectileMovementType::Homing:
         if (Target && Target->IsAlive())
         {
-            MoveDir = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            FVector DesiredDir = (Target->GetActorLocation() - GetActorLocation());
+
+            // Ignorer la profondeur pour gameplay 2D side-view
+            DesiredDir.Y = 0;
+            DesiredDir.Normalize();
+
+            FVector CurrentDir = InitialDirection.GetSafeNormal();
+
+            // rotation lissée (vitesse angulaire max)
+            FRotator CurRot = CurrentDir.Rotation();
+            FRotator DesRot = DesiredDir.Rotation();
+            FRotator NewRot = FMath::RInterpConstantTo(CurRot, DesRot, DeltaTime, MaxTurnRateDeg);
+
+            InitialDirection = NewRot.Vector().GetSafeNormal();
         }
         else
         {
-            MovementType = EProjectileMovementType::Forward; // Fallback
+            MovementType = EProjectileMovementType::Forward;
         }
+        break;
+
+    case EProjectileMovementType::Forward:
+        // rien à changer, on garde la direction initiale
+        break;
+
+    case EProjectileMovementType::TowardTarget:
+        // rien non plus ici, tu veux du straight-to-target sans adaptation
         break;
     }
 
-    SetActorLocation(GetActorLocation() + MoveDir * ProjectileSpeed * DeltaTime, true);
+    // Mouvement
+    FVector NewLoc = GetActorLocation() + InitialDirection * ProjectileSpeed * DeltaTime;
 
+    //  Lock profondeur Y -> vue de profil 2D
+    NewLoc.Y = LockedY;
+
+    SetActorLocation(NewLoc, true);
+
+    // Rotation pour aligner le mesh sur le mouvement
     if (bRotateToVelocity)
     {
-        FRotator Rot = MoveDir.Rotation();
+        FRotator Rot = InitialDirection.Rotation();
         Rot.Yaw += MeshYawOffsetDeg;
         SetActorRotation(Rot);
     }
-
-    InitialDirection = MoveDir; // Keep last valid direction
 }
 
 // Base projectile s'occupe de trigger le on hit effect

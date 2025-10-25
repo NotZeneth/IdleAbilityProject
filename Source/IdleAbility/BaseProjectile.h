@@ -79,6 +79,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bounce")
     int32 RemainingBounces = 0;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Homing")
+    float MaxTurnRateDeg = 360.f; // degrés par seconde
+
+    float LockedY;
+
 private:
     UFUNCTION()
     void OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,

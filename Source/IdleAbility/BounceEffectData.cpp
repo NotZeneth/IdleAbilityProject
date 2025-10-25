@@ -66,8 +66,14 @@ bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 
     // Redirige le projectile
     Projectile->Target = NewTarget;
-    Projectile->InitialDirection =
-        (NewTarget->GetActorLocation() - Projectile->GetActorLocation()).GetSafeNormal();
+
+    // Impulsion verticale si et seulement si Homing
+    if (Projectile->MovementType == EProjectileMovementType::Homing)
+    {
+        Projectile->InitialDirection = FVector(0.f, 0.f, 1.f).GetSafeNormal();
+    }
+
+    Projectile->InitialDirection = FVector(0.f, 0.f, 1.f);
 
     UE_LOG(LogTemp, Warning, TEXT("[Bounce] Bounce réussi: %s -> %s (bounces restants=%d)"),
         *Context.Target->GetName(),
