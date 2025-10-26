@@ -3,26 +3,25 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilityEffectData.h"
+#include "RepeatedEffectData.h"
 #include "RetriggerEffectData.generated.h"
 
 UCLASS(BlueprintType)
-class IDLEABILITY_API URetriggerEffectData : public UAbilityEffectData
+class IDLEABILITY_API URetriggerEffectData : public URepeatedEffectData
 {
     GENERATED_BODY()
 
 public:
-    // L'effet à relancer (souvent un SpawnProjectile, Damage, etc.)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger")
-    UAbilityEffectData* EffectToRetrigger = nullptr;
 
-    // Chance de relancer (0 = jamais, 1 = toujours)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    // Chance à chaque Tick (0 à 1)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger",
+        meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float RetriggerChance = 1.0f;
 
-    // Nombre maximum de retriggers avant arrêt
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger", meta = (ClampMin = "1"))
-    int32 MaxRetriggerCount = 1;
+    // Nombre max de retriggers
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger",
+        meta = (ClampMin = "1"))
+    int32 MaxTriggers = 1;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };

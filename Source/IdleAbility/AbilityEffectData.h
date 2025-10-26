@@ -55,6 +55,9 @@ public:
     float TickInterval = 1.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+    bool bTriggerOnApply = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
     TArray<UAbilityEffectData*> SubEffects;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const { return true; }

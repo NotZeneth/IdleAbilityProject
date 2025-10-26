@@ -272,16 +272,19 @@ void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* Eff
 
     if (EffectData->Duration <= 0.f)
     {
-        // Instantané
+        // Instantané (one-shot)
         EffectData->ApplyEffect(Context);
         return;
     }
 
-    // Persistant -> appliquer une fois
-    if (!EffectData->ApplyEffect(Context))
+    // Persistant (effet qui dure)
+    if (EffectData->bTriggerOnApply)
     {
-        // Si l’effet a "raté" (Frenzy roll fail, etc.), on ne range rien
-        return;
+        // Appliquer tout de suite si l’effet le veut (DoT, Heal Over Time, etc.)
+        if (!EffectData->ApplyEffect(Context))
+        {
+            return;
+        }
     }
 
     FAbilityEffectSpec NewSpec(EffectData, Context);

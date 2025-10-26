@@ -31,9 +31,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Repeat")
     bool bIgnoreTargetDeath = false;
 
-    // Aide pour designer : si > 0, pensez à mettre Duration = RepeatCount * TickInterval
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Repeat", meta = (ClampMin = "0"))
-    int32 RepeatCount = 0;
 
     // Important : on utilise Duration/TickInterval hérités pour la persistance/tempo.
     // ApplyEffect sera appelé :

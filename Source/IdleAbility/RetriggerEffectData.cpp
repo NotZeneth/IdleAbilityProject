@@ -7,52 +7,31 @@
 
 bool URetriggerEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
-    if (!EffectToRetrigger || !Context.Source)
+    if (!EffectToRepeat || !Context.Source)
         return false;
 
-    // --- Roll de chance ---
-    const float Roll = FMath::FRand();
-    if (Roll > RetriggerChance)
-    {
-        UE_LOG(LogTemp, Log, TEXT("[Retrigger] %s roll=%.2f > chance=%.2f -> pas de retrigger"),
-            *Context.Source->GetName(), Roll, RetriggerChance);
-        return false;
-    }
+    UAbilityManagerComponent* Manager =
+        Context.Source->FindComponentByClass<UAbilityManagerComponent>();
+    if (!Manager) return false;
 
-    // --- Récupération du manager ---
-    UAbilityManagerComponent* Manager = Context.Source->FindComponentByClass<UAbilityManagerComponent>();
-    if (!Manager)
-        return false;
-
-    // --- Compteur de retriggers ---
     int32& Count = Manager->RetriggerCounts.FindOrAdd(this);
 
-    if (Count >= MaxRetriggerCount)
+    // Stop si limite atteinte
+    if (Count >= MaxTriggers)
     {
-        UE_LOG(LogTemp, Log, TEXT("[Retrigger] %s a atteint la limite (%d) pour %s"),
-            *Context.Source->GetName(), MaxRetriggerCount, *GetName());
-
-        // Reset pour réutiliser plus tard
         Manager->RetriggerCounts.Remove(this);
         return false;
     }
 
-    Count++;
+    const float Roll = FMath::FRand();
 
-    UE_LOG(LogTemp, Warning, TEXT("[Retrigger] %s relance %s (%d/%d)"),
-        *Context.Source->GetName(),
-        *EffectToRetrigger->GetName(),
-        Count,
-        MaxRetriggerCount);
-
-    // --- Relance immédiate de l'effet ---
-    Manager->ApplyEffectToTarget(EffectToRetrigger, Context);
-
-    // Nettoyage auto si on a atteint la limite
-    if (Count >= MaxRetriggerCount)
+    if (Roll <= RetriggerChance)
     {
-        Manager->RetriggerCounts.Remove(this);
+        Count++;
+        return URepeatedEffectData::ApplyEffect(Context);
     }
 
-    return true;
+    // Échec => stop définitif
+    Manager->RetriggerCounts.Remove(this);
+    return false;
 }
