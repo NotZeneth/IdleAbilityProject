@@ -12,10 +12,13 @@ class IDLEABILITY_API UDragEffectData : public UAbilityEffectData
     GENERATED_BODY()
 
 public:
-
-    // Force d'aspiration (1500 = vite, 500 = lent)
+    // Force d'aspiration par tick (distance déplacée)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drag")
     float Strength = 1500.f;
+
+    // Distance maximale d'influence de la tornade
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drag")
+    float MaxRange = 500.f;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };

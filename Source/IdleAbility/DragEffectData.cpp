@@ -12,14 +12,20 @@ bool UDragEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 
     FVector TornadoPos = Context.Projectile->GetActorLocation();
     FVector TargetPos = Context.Target->GetActorLocation();
-
-    // on garde l'altitude du mob
     TornadoPos.Z = TargetPos.Z;
 
     FVector toCenter = TornadoPos - TargetPos;
     float dist = toCenter.Size();
 
-    // éviter oscillations (overshoot)
+    // Si la cible est trop loin, on arrête l'effet
+    if (dist > MaxRange)
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("[DragEffect] %s est hors de portée de la tornade (%.1f > %.1f)"),
+            *Context.Target->GetName(), dist, MaxRange);
+        return false; // renvoyer false arrête le tick dans ton système
+    }
+
+    // Attraction normale
     if (dist <= Strength)
     {
         Context.Target->SetActorLocation(TornadoPos);
@@ -28,6 +34,5 @@ bool UDragEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 
     FVector dir = toCenter / dist;
     Context.Target->SetActorLocation(TargetPos + dir * Strength);
-
     return true;
 }
