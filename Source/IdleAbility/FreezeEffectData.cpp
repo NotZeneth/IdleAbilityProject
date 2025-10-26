@@ -3,6 +3,7 @@
 
 #include "FreezeEffectData.h"
 #include "CustomCharacter.h"
+#include "EnemyCharacter.h"
 
 bool UFreezeEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
@@ -10,6 +11,14 @@ bool UFreezeEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         return false;
 
     Context.Target->isFrozen = true;
+
+    if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Context.Target))
+    {
+        if (Enemy->FrozenPlane)
+        {
+            Enemy->FrozenPlane->SetHiddenInGame(false);
+        }
+    }
 
     return true;
 }

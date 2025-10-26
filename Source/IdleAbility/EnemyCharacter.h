@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "CustomCharacter.h"
+#include "Components/StaticMeshComponent.h"
+
 #include "EnemyCharacter.generated.h"
 
 UCLASS()
@@ -13,6 +15,21 @@ class IDLEABILITY_API AEnemyCharacter : public ACustomCharacter
 
 public:
     AEnemyCharacter();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+    USceneComponent* VisualRoot;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+    UStaticMeshComponent* EnemyMeshPlane;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+    UStaticMeshComponent* FrozenPlane;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+    UStaticMeshComponent* BurningPlane;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+    UStaticMeshComponent* WeakenedPlane;
 
 protected:
     virtual void BeginPlay() override;

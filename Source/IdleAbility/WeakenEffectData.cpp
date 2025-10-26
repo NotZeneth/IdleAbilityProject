@@ -3,15 +3,24 @@
 
 #include "WeakenEffectData.h"
 #include "CustomCharacter.h"
+#include "EnemyCharacter.h"
 
 bool UWeakenEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
     if (!Context.Target)
         return false;
 
-    ACustomCharacter* Target = Context.Target;
+    // Augmente les dégâts subis
+    Context.Target->DamageTakenBonus += DebuffMagnitude;
 
-    Target->DamageTakenBonus += DebuffMagnitude;
+    // Affiche le plane sur les ennemis
+    if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Context.Target))
+    {
+        if (Enemy->WeakenedPlane)
+        {
+            Enemy->WeakenedPlane->SetHiddenInGame(false);
+        }
+    }
 
-    return true; // Manager gère la durée et l'expiration
+    return true;
 }

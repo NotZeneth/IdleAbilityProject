@@ -4,6 +4,7 @@
 #include "UnfreezeEffectData.h"
 #include "AbilityManagerComponent.h"
 #include "CustomCharacter.h"
+#include "EnemyCharacter.h"
 #include "FreezeEffectData.h"
 #include "AbilityEffectSpec.h"
 
@@ -43,6 +44,14 @@ bool UUnfreezeEffectData::ApplyEffect(const FAbilityEffectContext& Context) cons
 
     // Si pas de Freeze restant : unfreeze
     Target->isFrozen = false;
+
+    if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Target))
+    {
+        if (Enemy->FrozenPlane)
+        {
+            Enemy->FrozenPlane->SetHiddenInGame(true);
+        }
+    }
 
     return true;
 }

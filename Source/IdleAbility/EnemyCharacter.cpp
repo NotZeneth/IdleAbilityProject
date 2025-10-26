@@ -7,12 +7,43 @@
 
 AEnemyCharacter::AEnemyCharacter()
 {
+    // === VISUAL ROOT ===
+    VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
+    VisualRoot->SetupAttachment(RootComponent);
+
+    // === MAIN ENEMY MESH PLANE ===
+    EnemyMeshPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EnemyMeshPlane"));
+    EnemyMeshPlane->SetupAttachment(VisualRoot);
+    EnemyMeshPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    EnemyMeshPlane->SetHiddenInGame(false);
+
+    // === STATUS EFFECT PLANES ===
+    FrozenPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FrozenPlane"));
+    FrozenPlane->SetupAttachment(VisualRoot);
+    FrozenPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FrozenPlane->SetHiddenInGame(true);
+
+    BurningPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BurningPlane"));
+    BurningPlane->SetupAttachment(VisualRoot);
+    BurningPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    BurningPlane->SetHiddenInGame(true);
+
+    WeakenedPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeakenedPlane"));
+    WeakenedPlane->SetupAttachment(VisualRoot);
+    WeakenedPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    WeakenedPlane->SetHiddenInGame(true);
 }
 
 void AEnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
     PlayerRef = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    const float RandomYOffset = FMath::FRandRange(0.001f, 0.01f);
+    FVector NewLoc = VisualRoot->GetRelativeLocation();
+    NewLoc.Y += RandomYOffset;
+    VisualRoot->SetRelativeLocation(NewLoc);
 }
 
 void AEnemyCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source)
