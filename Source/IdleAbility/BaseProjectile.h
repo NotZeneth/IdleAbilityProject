@@ -16,7 +16,8 @@ enum class EProjectileMovementType : uint8
 {
     Forward,
     TowardTarget,
-    Homing
+    Homing,
+    TeleportToTarget
 };
 
 UCLASS()
@@ -32,6 +33,9 @@ protected:
 
 public:
     virtual void Tick(float DeltaTime) override;
+
+    UFUNCTION()
+    void InitializeProjectile();
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     USceneComponent* Root;
@@ -86,6 +90,9 @@ public:
     float MaxTurnRateDeg = 360.f; // degrés par seconde
 
     float LockedY;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+    bool CanBeBlocked = false;
 
 private:
     UFUNCTION()

@@ -54,7 +54,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Over Time")
     float TickInterval = 1.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Over Time")
     bool bTriggerOnApply = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")

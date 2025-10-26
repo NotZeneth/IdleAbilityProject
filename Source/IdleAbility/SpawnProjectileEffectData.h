@@ -29,8 +29,18 @@ class IDLEABILITY_API USpawnProjectileEffectData : public UAbilityEffectData
     GENERATED_BODY()
 
 public:
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
     TArray<FWeightedProjectile> ProjectileOptions;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot")
+    bool bEnableMultishot = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot", meta = (EditCondition = "bEnableMultishot"))
+    float ChanceMultiplier = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot", meta = (EditCondition = "bEnableMultishot"))
+    float SpreadAngleDeg = 10.f;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };

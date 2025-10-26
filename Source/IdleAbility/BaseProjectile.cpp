@@ -31,21 +31,65 @@ void ABaseProjectile::BeginPlay()
 
     LockedY = GetActorLocation().Y;
 
-    if (Target && MovementType == EProjectileMovementType::Homing)
+    if (bRotateToVelocity)
     {
-        // Tir en cloche au départ
-        const FVector Forward = GetActorForwardVector();
-        const FVector Up = FVector::UpVector;
-        InitialDirection = (Forward + Up * 0.6f).GetSafeNormal();
+        FRotator Rot = InitialDirection.Rotation();
+        Rot.Yaw += MeshYawOffsetDeg;
+        SetActorRotation(Rot);
     }
-    else if (Target && MovementType == EProjectileMovementType::TowardTarget)
+
+    GetWorld()->GetTimerManager().SetTimer(
+        LifeTimerHandle,
+        this,
+        &ABaseProjectile::DestroyProjectile,
+        TimeBeforeSelfDestruct,
+        false);
+
+    UE_LOG(LogTemp, Verbose, TEXT("[Projectile] BeginPlay terminé pour %s"), *GetName());
+}
+
+
+void ABaseProjectile::InitializeProjectile()
+{
+    if (MovementType != EProjectileMovementType::Forward && !Target)
     {
-        // Direction initiale vers la cible
-        InitialDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+        UE_LOG(LogTemp, Warning, TEXT("[Projectile] InitializeProjectile appelé sans Target valide"));
+        return;
     }
-    else if (MovementType == EProjectileMovementType::Forward)
+
+    switch (MovementType)
     {
-        InitialDirection = GetActorForwardVector();
+        case EProjectileMovementType::TeleportToTarget:
+        {
+            FVector NewLoc = Target->GetActorLocation() + SpawnOffset;
+            SetActorLocation(NewLoc, false, nullptr, ETeleportType::TeleportPhysics);
+
+            UE_LOG(LogTemp, Log, TEXT("[Projectile] Téléporté sur la cible %s"), *Target->GetName());
+            break;
+        }
+
+        case EProjectileMovementType::TowardTarget:
+        {
+            InitialDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            break;
+        }
+
+        case EProjectileMovementType::Homing:
+        {
+            const FVector Forward = GetActorForwardVector();
+            const FVector Up = FVector::UpVector;
+            InitialDirection = (Forward + Up * 0.6f).GetSafeNormal();
+            break;
+        }
+
+        case EProjectileMovementType::Forward:
+        {
+            InitialDirection = GetActorForwardVector();
+            break;
+        }
+
+        default:
+            break;
     }
 
     if (bRotateToVelocity)
@@ -55,8 +99,6 @@ void ABaseProjectile::BeginPlay()
         SetActorRotation(Rot);
     }
 
-    GetWorld()->GetTimerManager().SetTimer(
-        LifeTimerHandle, this, &ABaseProjectile::DestroyProjectile, TimeBeforeSelfDestruct, false);
 }
 
 
@@ -118,35 +160,64 @@ void ABaseProjectile::Tick(float DeltaTime)
 }
 
 // Base projectile s'occupe de trigger le on hit effect
-void ABaseProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ABaseProjectile::OnProjectileOverlap(
+    UPrimitiveComponent* OverlappedComp,
+    AActor* OtherActor,
+    UPrimitiveComponent* OtherComp,
+    int32 OtherBodyIndex,
+    bool bFromSweep,
+    const FHitResult& SweepResult)
 {
-    if (!Source || OtherActor == Source) return;
+    if (!Source || OtherActor == Source)
+        return;
 
     ACustomCharacter* HitCharacter = Cast<ACustomCharacter>(OtherActor);
-    if (HitCharacter && HitCharacter != Source && HitCharacter->IsAlive())
+    if (!HitCharacter || !HitCharacter->IsAlive())
+        return;
+
+    if (MovementType == EProjectileMovementType::Homing)
     {
-        UAbilityManagerComponent* Manager =
-            Source ? Source->FindComponentByClass<UAbilityManagerComponent>() : nullptr;
-
-        for (UAbilityEffectData* Effect : EffectsOnHit) // ou SubEffects si tu utilises ça
+        // Si la cible touchée n'est pas celle que le projectile poursuit
+        if (HitCharacter != Target)
         {
-            if (!Effect || Effect->TriggerPhase != EEffectTriggerPhase::OnHit)
-                continue;
-
-            FAbilityEffectContext Ctx;
-            Ctx.Source = Source;
-            Ctx.Target = HitCharacter;
-            Ctx.Ability = Ability;
-            Ctx.Projectile = this;
-
-            if (Manager)
-                Manager->ApplyEffectToTarget(Effect, Ctx);  // gère instantané + persistant
+            if (CanBeBlocked)
+            {
+                // Le projectile peut être intercepté : il touche l’ennemi et s’arrête ici
+                UE_LOG(LogTemp, Log, TEXT("[Projectile] Homing intercepté par %s"), *HitCharacter->GetName());
+                Destroy();
+            }
             else
-                Effect->ApplyEffect(Ctx); // fallback (pas de persistance si pas de manager)
+            {
+                // Projectile ignore les ennemis autres que sa vraie cible
+                UE_LOG(LogTemp, Verbose, TEXT("[Projectile] Homing ignore %s (cible = %s)"),
+                    *HitCharacter->GetName(),
+                    Target ? *Target->GetName() : TEXT("null"));
+            }
+            return;
         }
     }
+
+    UAbilityManagerComponent* Manager =
+        Source ? Source->FindComponentByClass<UAbilityManagerComponent>() : nullptr;
+
+    for (UAbilityEffectData* Effect : EffectsOnHit)
+    {
+        if (!Effect || Effect->TriggerPhase != EEffectTriggerPhase::OnHit)
+            continue;
+
+        FAbilityEffectContext Ctx;
+        Ctx.Source = Source;
+        Ctx.Target = HitCharacter;
+        Ctx.Ability = Ability;
+        Ctx.Projectile = this;
+
+        if (Manager)
+            Manager->ApplyEffectToTarget(Effect, Ctx);
+        else
+            Effect->ApplyEffect(Ctx);
+    }
 }
+
 
 void ABaseProjectile::RedirectToTarget(ACustomCharacter* NewTarget) 
 {

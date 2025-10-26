@@ -17,7 +17,7 @@ bool URetriggerEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
     // On cherche la spec active correspondante dans le Manager
     if (TArray<FAbilityEffectSpec>* Specs = Manager->ActiveEffects.Find(Context.Target))
     {
-        for (const FAbilityEffectSpec& Spec : *Specs)
+        for (FAbilityEffectSpec& Spec : *Specs)
         {
             if (Spec.EffectData == this)
             {
@@ -34,9 +34,7 @@ bool URetriggerEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
                 // Vérifie la limite max
                 if (TicksPassed >= MaxTriggers)
                 {
-                    UE_LOG(LogTemp, Warning,
-                        TEXT("[Retrigger] Max atteint (%d/%d) pour %s"),
-                        TicksPassed, MaxTriggers, *GetName());
+                    Spec.TimeRemaining = -99.f; //  fin immédiate
                     return false;
                 }
 
@@ -49,18 +47,14 @@ bool URetriggerEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
                         TEXT("[Retrigger] Tick %d -> success (%.2f <= %.2f)"),
                         TicksPassed, Roll, RetriggerChance);
 
+                    // Succès -> exécuter le sous-effet normalement
                     return URepeatedEffectData::ApplyEffect(Context);
                 }
                 else
                 {
-                    UE_LOG(LogTemp, Warning,
-                        TEXT("[Retrigger] Tick %d -> fail (%.2f > %.2f)"),
-                        TicksPassed, Roll, RetriggerChance);
-
-                     return false;
+                    Spec.TimeRemaining = -99.f; //  fin immédiate
+                    return false;
                 }
-
-                break; // on sort une fois trouvé
             }
         }
     }
