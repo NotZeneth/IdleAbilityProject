@@ -7,6 +7,7 @@
 #include "PlayerCharacter.generated.h"
 
 class UAbilityManagerComponent;
+class UAbilityBarWidget;
 
 UCLASS()
 class IDLEABILITY_API APlayerCharacter : public ACustomCharacter
@@ -23,4 +24,10 @@ public:
     // Composant qui gère toutes les abilities du joueur
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
     UAbilityManagerComponent* AbilityManager;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UAbilityBarWidget> AbilityBarClass;
+
+    UPROPERTY()
+    UAbilityBarWidget* AbilityBarInstance;
 };

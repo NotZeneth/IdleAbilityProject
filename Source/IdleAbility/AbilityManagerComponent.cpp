@@ -4,6 +4,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Algo/RandomShuffle.h"
+#include "WaveGameMode.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
 {
@@ -13,6 +14,11 @@ UAbilityManagerComponent::UAbilityManagerComponent()
 void UAbilityManagerComponent::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (UWorld* World = GetWorld()) // Bon en vrai je devrais avoir le player qui le set et config mais flemme
+    {
+        GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
+    }
 }
 
 void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -20,10 +26,13 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
     // Gestion des abilities auto
+    if (!GameModeRef || GameModeRef->EnemyList.Num() == 0)
+        return; // Les ability se lancent pas s'il y a pas d'ennemie 
+
     for (int32 i = 0; i < EquippedAbilities.Num(); i++)
     {
         FAbilitySpec& Spec = EquippedAbilities[i];
-        if (Spec.Ability && Spec.Ability->TriggerType == EAbilityTriggerType::Auto)
+        if (Spec.Ability && Spec.isAutoCast)
         {
             TryActivateAbility(i);
         }
@@ -187,19 +196,18 @@ void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomC
 
     // Collecte brute des ennemis
     TArray<ACustomCharacter*> Candidates;
-    for (TActorIterator<ACustomCharacter> It(GetWorld()); It; ++It)
+    if (GameModeRef)
     {
-        ACustomCharacter* C = *It;
-        if (!C || C == Caster) continue;
-
-        if (C->TeamId == Caster->TeamId) continue;
-
-        Candidates.Add(C);
+        for (AEnemyCharacter* Enemy : GameModeRef->EnemyList)
+        {
+            if (!Enemy || !Enemy->IsAlive()) continue;
+            Candidates.Add(Enemy);
+        }
     }
 
     if (Ability->Targeting == EAbilityTargeting::RandomEnemies)
     {
-        Algo::RandomShuffle(Candidates);
+        Algo::RandomShuffle(Candidates); // bon ca c'est de la flmm mais ca existe donc why not hein
         const int32 N = FMath::Min(Ability->TargetCount, Candidates.Num());
         for (int32 i = 0; i < N; ++i)
         {
@@ -242,17 +250,17 @@ void UAbilityManagerComponent::GetEnemiesInRange(const ACustomCharacter* Origin,
 
     const float RangeSq = (Range <= 0.f) ? FLT_MAX : Range * Range;
 
-    for (TActorIterator<ACustomCharacter> It(GetWorld()); It; ++It)
+    if (GameModeRef)
     {
-        ACustomCharacter* C = *It;
-        if (!C || C == Origin) continue;
-        if (!C->IsAlive()) continue;
-
-        if (C->TeamId == Origin->TeamId) continue;
-
-        if (FVector::DistSquared(C->GetActorLocation(), Origin->GetActorLocation()) <= RangeSq)
+        for (AEnemyCharacter* Enemy : GameModeRef->EnemyList)
         {
-            Out.Add(C);
+            if (!Enemy || !Enemy->IsAlive()) continue;
+
+            const float DistSq = FVector::DistSquared(Enemy->GetActorLocation(), Origin->GetActorLocation());
+            if (DistSq <= RangeSq)
+            {
+                Out.Add(Enemy);
+            }
         }
     }
 }
@@ -300,4 +308,31 @@ void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* Eff
         Context.Target ? *Context.Target->GetName() : TEXT("null"),
         NewSpec.TimeRemaining,
         EffectData->TickInterval);
+}
+
+// --- ResetAllEffectsAndCooldowns ---
+// Cette fonction est appelée entre deux vagues d'ennemis (depuis le GameMode).
+// Elle supprime tous les effets persistants (DoT, buffs, Frenzy, etc.)
+// et réinitialise les cooldowns des compétences du joueur.
+//
+// Pourquoi ?
+// Lorsqu'une nouvelle vague commence, on veut éviter que des effets de la
+// vague précédente continuent de tick ou influencent la cadence d'attaque.
+// Sans ce reset, des états orphelins (ex: Frenzy encore actif sur un ennemi mort)
+// pourraient provoquer des comportements incohérents (spam d'attaques, cooldowns bloqués...).
+//
+// En vidant ActiveEffects et en remettant les CooldownEndTime à zéro,
+// on garantit que le joueur repart d'un état "propre" à chaque nouvelle vague.
+
+void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
+{
+    ActiveEffects.Empty();
+    PendingRemovals.Empty();
+
+    for (FAbilitySpec& Spec : EquippedAbilities)
+    {
+        Spec.CooldownEndTime = 0.f;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("manager reset"));
 }

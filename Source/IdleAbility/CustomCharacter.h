@@ -92,4 +92,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
     float DamageTakenBonus = 0.f; // 0 = normal, 0.5 = +50% dmg
 
+    UPROPERTY()
+    class AWaveGameMode* GameModeRef = nullptr;
+
 };

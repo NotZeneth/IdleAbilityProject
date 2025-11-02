@@ -31,8 +31,19 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
     UStaticMeshComponent* WeakenedPlane;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MoveSpeed = 200.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float DamagePerSec = 10.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float AttackRange = 100.0f;
+
 protected:
     virtual void BeginPlay() override;
+
+    virtual void Tick(float DeltaTime) override;
 
 public:
     virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;

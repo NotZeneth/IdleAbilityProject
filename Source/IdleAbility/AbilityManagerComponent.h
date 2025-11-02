@@ -19,6 +19,10 @@ struct FAbilitySpec
 
     float CooldownEndTime = 0.f;
     float CooldownScalar = 1.f;
+
+    // c'est le widget qui va dire si on le passe en auto, c'est pas ideal mais ca fonctionne
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
+    bool isAutoCast = false;
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -71,5 +75,11 @@ public:
 
     UPROPERTY()
     TArray<ACustomCharacter*> PendingRemovals;
+
+    UPROPERTY()
+    class AWaveGameMode* GameModeRef = nullptr;
+
+    UFUNCTION(BlueprintCallable, Category = "Abilities")
+    void ResetAllEffectsAndCooldowns();
 
 };

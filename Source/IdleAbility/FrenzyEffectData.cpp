@@ -29,10 +29,6 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     float EffectiveChance = Context.Source->FrenzyChance * ChanceMultiplier;
     if (FMath::FRand() > EffectiveChance)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Frenzy] %s a lancé %s mais pas de proc (chance=%.2f)"),
-            *Context.Source->GetName(),
-            *Context.Ability->AbilityName.ToString(),
-            EffectiveChance);
         return false;
     }
 
@@ -44,11 +40,6 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     if (Spec)
     {
         Spec->CooldownScalar *= FrenzyScalar;
-        UE_LOG(LogTemp, Warning, TEXT("[Frenzy] %s -> Ability %s entre en Frenzy (Scalar=%.2f)"),
-            *Context.Source->GetName(),
-            *Context.Ability->AbilityName.ToString(),
-            Spec->CooldownScalar);
-
         LastTime = Now;
         return true;
     }

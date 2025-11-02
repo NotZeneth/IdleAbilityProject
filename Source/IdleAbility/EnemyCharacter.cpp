@@ -3,6 +3,7 @@
 #include "EnemyCharacter.h"
 #include "PlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "WaveGameMode.h"
 #include "AbilityManagerComponent.h"
 
 AEnemyCharacter::AEnemyCharacter()
@@ -34,6 +35,25 @@ AEnemyCharacter::AEnemyCharacter()
     WeakenedPlane->SetHiddenInGame(true);
 }
 
+void AEnemyCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (isFrozen)
+        return;
+
+    FVector Forward = GetActorForwardVector();
+    FVector NewLocation = GetActorLocation() + Forward * MoveSpeed * DeltaTime;
+
+    SetActorLocation(NewLocation, true); // true car j'veux que ca stop vs le mur
+
+    // On attaque chaque frame oui, pas d'attack speed + cd etc, flemme, les mobs ont une aura qui dps, the end.
+    if (NewLocation.X < GameModeRef->WallLocation.X + AttackRange && GameModeRef->WallHealth>0) // si entre le mur et "mur + max attack range"
+    {
+        GameModeRef->WallHealth -= DamagePerSec * DeltaTime;
+    }
+}
+
 void AEnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -53,7 +73,8 @@ void AEnemyCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTyp
     if (!IsAlive() && PlayerRef && PlayerRef->AbilityManager)
     {
         UE_LOG(LogTemp, Warning, TEXT("%s est mort -> notify Player"), *GetName());
-        PlayerRef->AbilityManager->OnEnemyKilled(this);
+        PlayerRef->AbilityManager->OnEnemyKilled(this); // Bon en vrai, ca ca pourrait être fait par le manager mais bon heu le temps
+        GameModeRef->OnEnemyDied(this);
         Destroy(); // on détruit ICI
     }
 }

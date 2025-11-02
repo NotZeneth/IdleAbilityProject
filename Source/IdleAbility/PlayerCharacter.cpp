@@ -2,7 +2,10 @@
 
 
 #include "PlayerCharacter.h"
+#include "WaveGameMode.h"
 #include "AbilityManagerComponent.h"
+#include "AbilityBarWidget.h"
+#include "Blueprint/UserWidget.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -17,5 +20,25 @@ void APlayerCharacter::BeginPlay()
     if (!AbilityManager)
     {
         UE_LOG(LogTemp, Error, TEXT("PlayerCharacter %s n’a pas d’AbilityManager !"), *GetName());
+    }
+
+    if (UWorld* World = GetWorld())
+    {
+        GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
+        if (!GameModeRef)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PlayerCharacter %s n’a pas de game mode ref, ca va coincer !"), *GetName());
+            return;
+        }
+        GameModeRef->PlayerRef = this;
+    }
+
+    if (AbilityBarClass)
+    {
+        AbilityBarInstance = CreateWidget<UAbilityBarWidget>(GetWorld(), AbilityBarClass);
+        if (AbilityBarInstance)
+        {
+            AbilityBarInstance->AddToViewport();
+        }
     }
 }
