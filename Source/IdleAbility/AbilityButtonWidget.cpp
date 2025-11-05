@@ -16,13 +16,17 @@ void UAbilityButtonWidget::NativeConstruct()
     if (!AbilityManager)
     {
         if (APlayerCharacter* Player = Cast<APlayerCharacter>(GetOwningPlayerPawn()))
-            AbilityManager = Player->FindComponentByClass<UAbilityManagerComponent>(); //bon, il y a mieux mais je rush la
+            AbilityManager = Player->FindComponentByClass<UAbilityManagerComponent>();
     }
 
     if (Button_Ability)
     {
         Button_Ability->OnClicked.AddDynamic(this, &UAbilityButtonWidget::OnLeftClicked);
-        Button_Ability->OnPressed.AddDynamic(this, &UAbilityButtonWidget::OnRightClicked);
+    }
+
+    if (Button_AutoCast)
+    {
+        Button_AutoCast->OnClicked.AddDynamic(this, &UAbilityButtonWidget::OnToggleAutoCast);
     }
 
     // l'icone
@@ -36,21 +40,13 @@ void UAbilityButtonWidget::NativeConstruct()
     }
 }
 
+
 void UAbilityButtonWidget::OnLeftClicked()
 {
     if (!AbilityManager) return;
     if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex)) return;  // oui bon c'est overkill mais bon j'avais envie de test la fonction
 
     AbilityManager->TryActivateAbility(AbilityIndex);
-}
-
-void UAbilityButtonWidget::OnRightClicked()
-{
-    if (!AbilityManager) return;
-    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex)) return;
-
-    FAbilitySpec& Spec = AbilityManager->EquippedAbilities[AbilityIndex];
-    Spec.isAutoCast = !Spec.isAutoCast;
 }
 
 void UAbilityButtonWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -71,4 +67,16 @@ void UAbilityButtonWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
         else
             Text_Cooldown->SetText(FText::GetEmpty());
     }
+}
+
+void UAbilityButtonWidget::OnToggleAutoCast()
+{
+    if (!AbilityManager) return;
+    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex)) return;
+
+    FAbilitySpec& Spec = AbilityManager->EquippedAbilities[AbilityIndex];
+    Spec.isAutoCast = !Spec.isAutoCast;
+
+    UE_LOG(LogTemp, Warning, TEXT("[UI] Ability %d autocast = %s"),
+        AbilityIndex, Spec.isAutoCast ? TEXT("ON") : TEXT("OFF"));
 }

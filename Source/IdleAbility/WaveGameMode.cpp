@@ -1,7 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-// WaveGameMode.cpp
 #include "WaveGameMode.h"
 #include "EnemyCharacter.h"
 #include "PlayerCharacter.h"
@@ -61,6 +59,7 @@ void AWaveGameMode::SpawnEnemy()
 
     Enemy->GameModeRef = this;
     EnemyList.Add(Enemy);
+    Enemy->ConfigStats(CurrentWave);
     UE_LOG(LogTemp, Log, TEXT("Spawned Enemy"));
 
     EnemiesLeftToSpawn -= 1;
@@ -74,6 +73,9 @@ void AWaveGameMode::OnEnemyDied(AEnemyCharacter* DeadEnemy) // called by the ene
 {
     EnemyList.Remove(DeadEnemy); // j'pense pending destroy donc ca permet quand meme de retirer sans probleme
 
+    PlayerRef->AddGold(DeadEnemy->GoldOnDeath);
+    PlayerRef->AddGem(DeadEnemy->GemOnDeath);
+
     if (EnemiesLeftToSpawn == 0 && EnemyList.IsEmpty()) // Double check car un enemie peut se faire OS avant le spawn du prochain
     {
         FTimerHandle Handle;
@@ -81,5 +83,31 @@ void AWaveGameMode::OnEnemyDied(AEnemyCharacter* DeadEnemy) // called by the ene
         UE_LOG(LogTemp, Log, TEXT("[Wave] Wave %d completed. Next wave in %.2fs"), CurrentWave, TimeBetweenWaves);
 
         PlayerRef->AbilityManager->ResetAllEffectsAndCooldowns();
+    }
+}
+
+void AWaveGameMode::JumpToWave(int NewWave)
+{
+    if (!PlayerRef || !PlayerRef->AbilityManager)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[Wave] JumpToWave impossible : pas de PlayerRef ou AbilityManager"));
+        return;
+    }
+
+    if (NewWave <= 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Wave] JumpToWave ignoré : valeur invalide (%d)"), NewWave);
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[Wave] Jump vers la vague %d (reset des ennemis et effets)"), NewWave);
+
+    CurrentWave = NewWave - 1; // car incrémentée dans le startwave qui sera appelé a la mort de tous les enemis
+    for (AEnemyCharacter* Enemy : EnemyList)
+    {
+        if (!Enemy || !Enemy->IsAlive())
+            continue;
+
+        Enemy->TakeCustomDamage(999999.f, EDamageType::Pure, PlayerRef);
     }
 }

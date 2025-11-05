@@ -18,10 +18,10 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     // Premier cast : pas de cooldown
     if (LastTime > 0.0f && Now - LastTime < InternalCooldown)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Frenzy] %s a lancé %s mais ICD pas fini (reste %.2fs)"),
-            *Context.Source->GetName(),
-            *Context.Ability->AbilityName.ToString(),
-            InternalCooldown - (Now - LastTime));
+        //UE_LOG(LogTemp, Warning, TEXT("[Frenzy] %s a lancé %s mais ICD pas fini (reste %.2fs)"),
+        //    *Context.Source->GetName(),
+        //    *Context.Ability->AbilityName.ToString(),
+        //    InternalCooldown - (Now - LastTime));
         return false;
     }
 

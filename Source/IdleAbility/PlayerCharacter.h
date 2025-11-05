@@ -25,9 +25,29 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
     UAbilityManagerComponent* AbilityManager;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UAbilityBarWidget> AbilityBarClass;
 
     UPROPERTY()
-    UAbilityBarWidget* AbilityBarInstance;
+    UAbilityBarWidget* AbilityWidgetRef;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
+    int CurrentGold = 100;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
+    int GoldMultiplier = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
+    int CurrentGem = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
+    int GemMultiplier = 1;
+
+    UFUNCTION(BlueprintCallable, Category = "Progression")
+    void AddGold(float amount);
+
+    UFUNCTION(BlueprintCallable, Category = "Progression")
+    void AddGem(float amount);
+
+    virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;
 };

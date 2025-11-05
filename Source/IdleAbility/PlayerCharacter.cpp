@@ -35,10 +35,35 @@ void APlayerCharacter::BeginPlay()
 
     if (AbilityBarClass)
     {
-        AbilityBarInstance = CreateWidget<UAbilityBarWidget>(GetWorld(), AbilityBarClass);
-        if (AbilityBarInstance)
+        AbilityWidgetRef = CreateWidget<UAbilityBarWidget>(GetWorld(), AbilityBarClass);
+        if (AbilityWidgetRef)
         {
-            AbilityBarInstance->AddToViewport();
+            AbilityWidgetRef->AddToViewport();
         }
     }
+
+    // Oui je sais, il faut faire ca dans le player controller, mais j'ai la flemme d'en creer un juste pour ca :X
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        PC->bShowMouseCursor = true;
+        PC->bEnableClickEvents = true;
+        PC->bEnableMouseOverEvents = true;
+    }
+}
+
+void APlayerCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source)
+{
+    Super::TakeCustomDamage(DamageAmount, DamageType, Source);
+
+    
+}
+
+void APlayerCharacter::AddGold(float amount)
+{
+    CurrentGold += amount * GoldMultiplier;
+}
+
+void APlayerCharacter::AddGem(float amount)
+{
+    CurrentGem += amount * GemMultiplier;
 }

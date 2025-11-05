@@ -31,15 +31,20 @@ protected:
     void OnLeftClicked();
 
     UFUNCTION()
-    void OnRightClicked();
+    void OnToggleAutoCast();
 
 private:
-    UPROPERTY(meta = (BindWidgetOptional))
+    UPROPERTY(EditAnywhere, meta = (BindWidget))
     UButton* Button_Ability;
 
-    UPROPERTY(meta = (BindWidgetOptional))
+    UPROPERTY(EditAnywhere, meta = (BindWidget))
     UTextBlock* Text_Cooldown;
 
-    UPROPERTY(meta = (BindWidgetOptional))
-    UImage* AbilityIcon; // oui je peux ecrire class UImage mais bon whatever
+    UPROPERTY(EditAnywhere, meta = (BindWidget))
+    UImage* AbilityIcon;
+
+    // Nouveau petit bouton pour activer/désactiver l'autocast
+    UPROPERTY(EditAnywhere, meta = (BindWidget))
+    UButton* Button_AutoCast;
+
 };

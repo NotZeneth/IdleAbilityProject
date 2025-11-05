@@ -27,7 +27,7 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
     // Gestion des abilities auto
     if (!GameModeRef || GameModeRef->EnemyList.Num() == 0)
-        return; // Les ability se lancent pas s'il y a pas d'ennemie 
+        return; // Les ability se lancent pas s'il y a pas d'ennemi 
 
     for (int32 i = 0; i < EquippedAbilities.Num(); i++)
     {
@@ -38,16 +38,24 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
         }
     }
 
+    // ============================================================
     // Gestion des effets persistants (DOT, buffs, debuffs…)
+    // ============================================================
+
+    TArray<ACustomCharacter*> Keys;
+    ActiveEffects.GetKeys(Keys);   // On fige la liste avant d'itérer
     TArray<ACustomCharacter*> TargetsToRemove;
 
-    for (auto& Pair : ActiveEffects)
+    for (ACustomCharacter* Target : Keys)
     {
-        ACustomCharacter* Target = Pair.Key;
         if (!Target || !Target->IsAlive())
             continue;
 
-        TArray<FAbilityEffectSpec>& Effects = Pair.Value;
+        TArray<FAbilityEffectSpec>* EffectsPtr = ActiveEffects.Find(Target);
+        if (!EffectsPtr)
+            continue;
+
+        TArray<FAbilityEffectSpec>& Effects = *EffectsPtr;
 
         Effects.RemoveAll([&](FAbilityEffectSpec& Spec)
             {
@@ -107,6 +115,9 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
         ActiveEffects.Remove(Tgt);
     }
 
+    // ============================================================
+    // Suppression différée des entités mortes
+    // ============================================================
     if (PendingRemovals.Num() > 0)
     {
         for (ACustomCharacter* Dead : PendingRemovals)
@@ -116,6 +127,7 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
         PendingRemovals.Reset();
     }
 }
+
 
 
 
@@ -324,15 +336,60 @@ void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* Eff
 // En vidant ActiveEffects et en remettant les CooldownEndTime à zéro,
 // on garantit que le joueur repart d'un état "propre" à chaque nouvelle vague.
 
+// Update : on trigger aussi le expire, typiquement que frenzy call unfrenzy
 void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
 {
+    UE_LOG(LogTemp, Warning, TEXT("[Reset] START — ActiveEffects=%d targets"), ActiveEffects.Num());
+
+    // 1) Forcer tous les OnExpire (ex: UnFrenzy / Unfreeze / UnWeaken…)
+    //    On parcourt une copie des clés pour éviter toute modif pendant l'itération.
+    TArray<ACustomCharacter*> Keys;
+    ActiveEffects.GetKeys(Keys);
+
+    for (ACustomCharacter* Target : Keys)
+    {
+        if (!Target) continue;
+
+        TArray<FAbilityEffectSpec>* EffectsPtr = ActiveEffects.Find(Target);
+        if (!EffectsPtr) continue;
+
+        for (FAbilityEffectSpec& Spec : *EffectsPtr)
+        {
+            if (!Spec.EffectData) continue;
+
+            for (const UAbilityEffectData* Sub : Spec.EffectData->SubEffects)
+            {
+                if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("[Reset] Force OnExpire %s -> Target=%s"),
+                        *Sub->GetClass()->GetName(),
+                        Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
+
+                    Sub->ApplyEffect(Spec.Context);
+                }
+            }
+        }
+    }
+
+    // 2) Purge des effets persistants + files d’attente
     ActiveEffects.Empty();
     PendingRemovals.Empty();
 
+    // 3) Reset des cooldowns ET—par sécurité—du CooldownScalar (anti-Frenzy bloqué)
+    //    (si d'autres effets modifient le scalar un jour, on pourra l'affiner)
     for (FAbilitySpec& Spec : EquippedAbilities)
     {
+        UE_LOG(LogTemp, Warning, TEXT("[Reset] Before: %s  CDScalar=%.3f"),
+            Spec.Ability ? *Spec.Ability->AbilityName.ToString() : TEXT("null"),
+            Spec.CooldownScalar);
+
         Spec.CooldownEndTime = 0.f;
+        Spec.CooldownScalar = 1.f;
+
+        UE_LOG(LogTemp, Warning, TEXT("[Reset] After : %s  CDScalar=%.3f"),
+            Spec.Ability ? *Spec.Ability->AbilityName.ToString() : TEXT("null"),
+            Spec.CooldownScalar);
     }
 
-    UE_LOG(LogTemp, Log, TEXT("manager reset"));
+    UE_LOG(LogTemp, Warning, TEXT("[Reset] DONE"));
 }

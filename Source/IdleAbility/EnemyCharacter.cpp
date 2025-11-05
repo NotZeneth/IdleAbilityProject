@@ -34,6 +34,35 @@ AEnemyCharacter::AEnemyCharacter()
     WeakenedPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     WeakenedPlane->SetHiddenInGame(true);
 }
+void AEnemyCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    PlayerRef = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    const float RandomYOffset = FMath::FRandRange(0.001f, 0.01f);
+    FVector NewLoc = VisualRoot->GetRelativeLocation();
+    NewLoc.Y += RandomYOffset;
+    VisualRoot->SetRelativeLocation(NewLoc);
+}
+
+void AEnemyCharacter::ConfigStats(int Wave)
+{
+    MoveSpeed = FMath::CeilToFloat(200.f + Wave * (100 / (100 + DamagePerSec)));
+    DamagePerSec = FMath::CeilToFloat(DamagePerSec + Wave * (100 / (100 + DamagePerSec))); // diminishing return
+
+    MaxHP = MaxHP + Wave * (100 / (100 + MaxHP)); // max hp c'est la valeur de base set dans le BP en fait, ez 
+    MaxHP = FMath::CeilToFloat(MaxHP / 10) * 10; // arrondir a la dizaine superieure
+    CurrentHP = MaxHP;
+
+    GoldOnDeath = FMath::FloorToFloat(GoldOnDeath + Wave * (100 / (100 + GoldOnDeath)));
+    GemOnDeath = FMath::FloorToFloat(GemOnDeath + Wave * (100 / (100 + GoldOnDeath)));
+
+    GemOnDeath += (FMath::FRand() <= FullGemOnDeathChance) ? 1.f : 0.f;
+
+    UE_LOG(LogTemp, Warning, TEXT("Config stat done"));
+}
+
 
 void AEnemyCharacter::Tick(float DeltaTime)
 {
@@ -48,22 +77,10 @@ void AEnemyCharacter::Tick(float DeltaTime)
     SetActorLocation(NewLocation, true); // true car j'veux que ca stop vs le mur
 
     // On attaque chaque frame oui, pas d'attack speed + cd etc, flemme, les mobs ont une aura qui dps, the end.
-    if (NewLocation.X < GameModeRef->WallLocation.X + AttackRange && GameModeRef->WallHealth>0) // si entre le mur et "mur + max attack range"
+    if (NewLocation.X < GameModeRef->WallLocation.X + AttackRange && GameModeRef->PlayerRef->CurrentHP>0) // si entre le mur et "mur + max attack range"
     {
-        GameModeRef->WallHealth -= DamagePerSec * DeltaTime;
+        GameModeRef->PlayerRef->TakeCustomDamage(DamagePerSec * DeltaTime, EDamageType::Pure, this);
     }
-}
-
-void AEnemyCharacter::BeginPlay()
-{
-    Super::BeginPlay();
-
-    PlayerRef = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
-    const float RandomYOffset = FMath::FRandRange(0.001f, 0.01f);
-    FVector NewLoc = VisualRoot->GetRelativeLocation();
-    NewLoc.Y += RandomYOffset;
-    VisualRoot->SetRelativeLocation(NewLoc);
 }
 
 void AEnemyCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source)

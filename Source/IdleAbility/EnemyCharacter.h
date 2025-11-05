@@ -40,6 +40,16 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float AttackRange = 100.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float GoldOnDeath = 2.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float GemOnDeath = 0.01f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float FullGemOnDeathChance = 0.01f;
+
+
 protected:
     virtual void BeginPlay() override;
 
@@ -47,6 +57,8 @@ protected:
 
 public:
     virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;
+
+    void ConfigStats(int Wave);
 
 private:
     UPROPERTY()

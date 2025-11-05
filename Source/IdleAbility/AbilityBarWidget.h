@@ -28,12 +28,13 @@ public:
 
 protected:
     /** Container horizontal des boutons */
-    UPROPERTY(meta = (BindWidgetOptional))
+    UPROPERTY(EditAnywhere, meta = (BindWidget))
     UHorizontalBox* ButtonContainer;
 
     /** Classe C++ du widget bouton individuel */
-    UPROPERTY(EditDefaultsOnly, Category = "Abilities")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Abilities")
     TSubclassOf<UAbilityButtonWidget> AbilityButtonClass;
+
 
     /** Référence vers le AbilityManager du joueur */
     UPROPERTY()

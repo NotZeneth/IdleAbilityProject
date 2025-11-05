@@ -109,18 +109,16 @@ void ABaseProjectile::Tick(float DeltaTime)
     // Direction mise à jour selon le type de mouvement
     switch (MovementType)
     {
-    case EProjectileMovementType::Homing:
+    case EProjectileMovementType::Homing: // 2D quaternion cool mais wah 3d c'est stylish donc je laisse
         if (Target && Target->IsAlive())
         {
             FVector DesiredDir = (Target->GetActorLocation() - GetActorLocation());
 
-            // Ignorer la profondeur pour gameplay 2D side-view
             DesiredDir.Y = 0;
             DesiredDir.Normalize();
 
             FVector CurrentDir = InitialDirection.GetSafeNormal();
 
-            // rotation lissée (vitesse angulaire max)
             FRotator CurRot = CurrentDir.Rotation();
             FRotator DesRot = DesiredDir.Rotation();
             FRotator NewRot = FMath::RInterpConstantTo(CurRot, DesRot, DeltaTime, MaxTurnRateDeg);

@@ -67,8 +67,6 @@ void ACustomCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
     if (!IsAlive())
     {
         UE_LOG(LogTemp, Warning, TEXT("%s est mort !"), *GetName());
-        // IMPORTANT : on NE détruit PAS ici.
-        // EnemyCharacter s’en charge (notification + Destroy()).
     }
 }
 

@@ -51,8 +51,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     FVector WallLocation = FVector(0,0,0);
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float WallHealth = 100;
+    UFUNCTION(BlueprintCallable, Category = "Waves")
+    void JumpToWave(int NewWave);
 
 
 
