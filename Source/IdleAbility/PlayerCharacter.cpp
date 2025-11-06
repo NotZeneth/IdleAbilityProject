@@ -5,7 +5,9 @@
 #include "WaveGameMode.h"
 #include "AbilityManagerComponent.h"
 #include "AbilityBarWidget.h"
+#include "GameplayWidget.h"
 #include "Blueprint/UserWidget.h"
+
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -33,7 +35,7 @@ void APlayerCharacter::BeginPlay()
         GameModeRef->PlayerRef = this;
     }
 
-    if (AbilityBarClass)
+    if (AbilityBarClass) // widget barre d'action
     {
         AbilityWidgetRef = CreateWidget<UAbilityBarWidget>(GetWorld(), AbilityBarClass);
         if (AbilityWidgetRef)
@@ -41,6 +43,18 @@ void APlayerCharacter::BeginPlay()
             AbilityWidgetRef->AddToViewport();
         }
     }
+
+    if (GameplayWidgetClass)
+    {
+        GameplayWidgetRef = CreateWidget<UGameplayWidget>(GetWorld(), GameplayWidgetClass);
+        if (GameplayWidgetRef)
+        {
+            GameplayWidgetRef->AddToViewport(1); // au dessus la bar, si jamais
+
+            UE_LOG(LogTemp, Warning, TEXT("Menu UI ajouté au viewport pour %s"), *GetName());
+        }
+    }
+
 
     // Oui je sais, il faut faire ca dans le player controller, mais j'ai la flemme d'en creer un juste pour ca :X
     if (APlayerController* PC = Cast<APlayerController>(GetController()))

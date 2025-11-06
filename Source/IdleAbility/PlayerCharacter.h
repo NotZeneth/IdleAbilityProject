@@ -8,6 +8,7 @@
 
 class UAbilityManagerComponent;
 class UAbilityBarWidget;
+class UGameplayWidget; // oui je sais les def unique je peux ecrire class dans la déclaration, mais ca m'aide a pas oublier d'inclure dans le cpp
 
 UCLASS()
 class IDLEABILITY_API APlayerCharacter : public ACustomCharacter
@@ -30,6 +31,12 @@ public:
 
     UPROPERTY()
     UAbilityBarWidget* AbilityWidgetRef;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UGameplayWidget> GameplayWidgetClass;
+
+    UPROPERTY()
+    UGameplayWidget* GameplayWidgetRef;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
     int CurrentGold = 100;
