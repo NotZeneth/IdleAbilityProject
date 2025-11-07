@@ -10,7 +10,7 @@ class UAbilityData;
 class ACustomCharacter;
 class ABaseProjectile;
 
-// Moment où l’effet se déclenche
+// When the effect triggers
 UENUM(BlueprintType)
 enum class EEffectTriggerPhase : uint8
 {
@@ -19,7 +19,46 @@ enum class EEffectTriggerPhase : uint8
     OnExpire,
 };
 
-// Contexte d’application
+USTRUCT(BlueprintType)
+struct FUpgradeStat
+{
+    GENERATED_BODY();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<float> EffectValues;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<float> UpgradeCosts;
+};
+
+USTRUCT(BlueprintType)
+struct FAbilityUpgradeSet
+{
+    GENERATED_BODY();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat Damage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat Cooldown;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat MultishotChance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat MultishotAmount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat BounceChance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat BounceAmount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FUpgradeStat FrenzyChance;
+};
+
+// Effect application context
 USTRUCT(BlueprintType)
 struct FAbilityEffectContext
 {
@@ -38,7 +77,7 @@ struct FAbilityEffectContext
     ABaseProjectile* Projectile = nullptr;
 };
 
-
+// Base effect asset
 UCLASS(BlueprintType)
 class IDLEABILITY_API UAbilityEffectData : public UDataAsset
 {
@@ -57,10 +96,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Over Time")
     bool bTriggerOnApply = true;
 
+    // Optional chained sub-effects
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
     TArray<UAbilityEffectData*> SubEffects;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const { return true; }
 };
-
-

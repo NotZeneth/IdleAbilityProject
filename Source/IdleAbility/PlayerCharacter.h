@@ -38,8 +38,14 @@ public:
     UPROPERTY()
     UGameplayWidget* GameplayWidgetRef;
 
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float AttackMultiplier = 10.f;
+
+    float GetPlayerAttack();
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
-    int CurrentGold = 100;
+    int CurrentGold = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
     int GoldMultiplier = 1;

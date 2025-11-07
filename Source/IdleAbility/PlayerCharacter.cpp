@@ -23,6 +23,7 @@ void APlayerCharacter::BeginPlay()
     {
         UE_LOG(LogTemp, Error, TEXT("PlayerCharacter %s n’a pas d’AbilityManager !"), *GetName());
     }
+    AbilityManager->PlayerRef = this;
 
     if (UWorld* World = GetWorld())
     {
@@ -52,6 +53,11 @@ void APlayerCharacter::BeginPlay()
             GameplayWidgetRef->AddToViewport(1); // au dessus la bar, si jamais
 
             UE_LOG(LogTemp, Warning, TEXT("Menu UI ajouté au viewport pour %s"), *GetName());
+
+            GameplayWidgetRef->UpdateHealth(CurrentHP, MaxHP);
+
+            GameplayWidgetRef->UpdateGold(CurrentGold);
+            GameplayWidgetRef->UpdateGem(CurrentGem);
         }
     }
 
@@ -69,15 +75,22 @@ void APlayerCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
 {
     Super::TakeCustomDamage(DamageAmount, DamageType, Source);
 
-    
+    GameplayWidgetRef->UpdateHealth(CurrentHP, MaxHP);
 }
 
 void APlayerCharacter::AddGold(float amount)
 {
     CurrentGold += amount * GoldMultiplier;
+    GameplayWidgetRef->UpdateGold(CurrentGold);
 }
 
 void APlayerCharacter::AddGem(float amount)
 {
     CurrentGem += amount * GemMultiplier;
+    GameplayWidgetRef->UpdateGem(CurrentGem);
+}
+
+float APlayerCharacter::GetPlayerAttack()
+{
+    return Attack * AttackMultiplier;
 }

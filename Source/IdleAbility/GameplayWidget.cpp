@@ -9,12 +9,17 @@
 #include "PlayerCharacter.h"
 #include "WaveGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "ShopWidget.h"
 
 void UGameplayWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
     PlayerRef = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    //GameModeRef = PlayerRef->GameModeRef;
+    GameModeRef = Cast<AWaveGameMode>(UGameplayStatics::GetGameMode(GetWorld())); // + safe au cas ou, sait on jamais
+
 
     if (ButtonAddGold)
         ButtonAddGold->OnClicked.AddDynamic(this, &UGameplayWidget::OnAddGold);
@@ -24,6 +29,10 @@ void UGameplayWidget::NativeConstruct()
 
     if (ButtonJumpWave)
         ButtonJumpWave->OnClicked.AddDynamic(this, &UGameplayWidget::OnJumpWave);
+
+    if (ButtonShop)
+        ButtonShop->OnClicked.AddDynamic(this, &UGameplayWidget::OnToggleShop);
+
 }
 
 // --- UPDATE FUNCTIONS ---
@@ -55,6 +64,7 @@ void UGameplayWidget::UpdateWave(int Wave)
         TextWave->SetText(FText::FromString(FString::Printf(TEXT("Wave: %d"), Wave)));
 }
 
+
 // --- BUTTONS ---
 
 void UGameplayWidget::OnAddGold()
@@ -78,3 +88,27 @@ void UGameplayWidget::OnJumpWave()
 
     GameModeRef->JumpToWave(Wave);
 }
+
+void UGameplayWidget::OnToggleShop()
+{
+    if (!ShopWidgetRef && ShopWidgetClass)
+    {
+        ShopWidgetRef = Cast<UShopWidget>(CreateWidget(GetWorld(), ShopWidgetClass));
+        if (ShopWidgetRef)
+        {
+            ShopWidgetRef->AddToViewport(10);
+        }
+    }
+
+    if (ShopWidgetRef)
+    {
+        bool bShow = (ShopWidgetRef->GetVisibility() != ESlateVisibility::Visible);
+        ShopWidgetRef->SetVisibility(bShow ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+
+        if (bShow)
+        {
+            ShopWidgetRef->PopulateShop(); // refresh des données
+        }
+    }
+}
+

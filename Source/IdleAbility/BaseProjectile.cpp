@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BaseProjectile.h"
+#include "AreaPulseEffectData.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CustomCharacter.h"
@@ -157,7 +158,6 @@ void ABaseProjectile::Tick(float DeltaTime)
     }
 }
 
-// Base projectile s'occupe de trigger le on hit effect
 void ABaseProjectile::OnProjectileOverlap(
     UPrimitiveComponent* OverlappedComp,
     AActor* OtherActor,
@@ -175,18 +175,15 @@ void ABaseProjectile::OnProjectileOverlap(
 
     if (MovementType == EProjectileMovementType::Homing)
     {
-        // Si la cible touchée n'est pas celle que le projectile poursuit
         if (HitCharacter != Target)
         {
             if (CanBeBlocked)
             {
-                // Le projectile peut être intercepté : il touche l’ennemi et s’arrête ici
                 UE_LOG(LogTemp, Log, TEXT("[Projectile] Homing intercepté par %s"), *HitCharacter->GetName());
                 Destroy();
             }
             else
             {
-                // Projectile ignore les ennemis autres que sa vraie cible
                 UE_LOG(LogTemp, Verbose, TEXT("[Projectile] Homing ignore %s (cible = %s)"),
                     *HitCharacter->GetName(),
                     Target ? *Target->GetName() : TEXT("null"));
@@ -205,9 +202,15 @@ void ABaseProjectile::OnProjectileOverlap(
 
         FAbilityEffectContext Ctx;
         Ctx.Source = Source;
-        Ctx.Target = HitCharacter;
+        Ctx.Target = HitCharacter;   // valeur par défaut
         Ctx.Ability = Ability;
         Ctx.Projectile = this;
+
+        // Cas spécifique : effet AreaPulse -> persistance ancrée au joueur
+        if (Effect->IsA(UAreaPulseEffectData::StaticClass()))
+        {
+            Ctx.Target = Source; // <- persistance stockée chez le joueur
+        }
 
         if (Manager)
             Manager->ApplyEffectToTarget(Effect, Ctx);
@@ -216,24 +219,6 @@ void ABaseProjectile::OnProjectileOverlap(
     }
 }
 
-
-void ABaseProjectile::RedirectToTarget(ACustomCharacter* NewTarget) 
-{
-    if (!NewTarget) return;
-
-    Target = NewTarget;
-
-    // recalcul d’une direction valide et on force un comportement "homing"
-    MovementType = EProjectileMovementType::Homing;
-    InitialDirection = (NewTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-
-    if (bRotateToVelocity)
-    {
-        FRotator Rot = InitialDirection.Rotation();
-        Rot.Yaw += MeshYawOffsetDeg;
-        SetActorRotation(Rot);
-    }
-}
 
 void ABaseProjectile::DestroyProjectile()
 {

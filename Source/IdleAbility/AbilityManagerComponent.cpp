@@ -1,3 +1,5 @@
+
+
 #include "AbilityManagerComponent.h"
 #include "CustomCharacter.h"
 #include "EnemyCharacter.h"
@@ -5,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Algo/RandomShuffle.h"
 #include "WaveGameMode.h"
+#include "PlayerCharacter.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
 {
@@ -19,6 +22,17 @@ void UAbilityManagerComponent::BeginPlay()
     {
         GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
     }
+
+    for (const FAbilitySpec& Spec : EquippedAbilities)
+    {
+        if (Spec.Ability)
+        {
+            UpgradeLevelsByAbility.Add(Spec.Ability, FUpgradeLevels());
+        }
+    }
+
+
+
 }
 
 void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -392,4 +406,87 @@ void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
     }
 
     UE_LOG(LogTemp, Warning, TEXT("[Reset] DONE"));
+}
+
+void UAbilityManagerComponent::UpgradeAbility(UAbilityData* Ability, FString UpgradeName)
+{
+    if (!Ability) return;
+
+    FAbilityUpgradeSet& Data = const_cast<FAbilityUpgradeSet&>(Ability->BaseUpgrades);
+    FUpgradeStat* Stat = nullptr;
+
+    if (UpgradeName == "Damage") Stat = &Data.Damage;
+    else if (UpgradeName == "Cooldown") Stat = &Data.Cooldown;
+    else if (UpgradeName == "MultishotChance") Stat = &Data.MultishotChance;
+    else if (UpgradeName == "MultishotAmount") Stat = &Data.MultishotAmount;
+    else if (UpgradeName == "BounceChance") Stat = &Data.BounceChance;
+    else if (UpgradeName == "BounceAmount") Stat = &Data.BounceAmount;
+    else if (UpgradeName == "FrenzyChance") Stat = &Data.FrenzyChance;
+
+    if (!Stat || Stat->EffectValues.Num() == 0) return;
+
+    // Récupère le niveau courant
+    FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(Ability);
+    if (!Levels) return;
+
+    int32* LevelPtr = nullptr;
+    if (UpgradeName == "Damage")           LevelPtr = &Levels->DamageLevel;
+    else if (UpgradeName == "Cooldown")         LevelPtr = &Levels->CooldownLevel;
+    else if (UpgradeName == "MultishotChance")  LevelPtr = &Levels->MultishotChanceLevel;
+    else if (UpgradeName == "MultishotAmount")  LevelPtr = &Levels->MultishotAmountLevel;
+    else if (UpgradeName == "BounceChance")     LevelPtr = &Levels->BounceChanceLevel;
+    else if (UpgradeName == "BounceAmount")     LevelPtr = &Levels->BounceAmountLevel;
+    else if (UpgradeName == "FrenzyChance")     LevelPtr = &Levels->FrenzyChanceLevel;
+
+    if (!LevelPtr) return;
+
+    int32 CurrentLevel = *LevelPtr;
+    int32 MaxLevel = Stat->EffectValues.Num();
+
+    if (CurrentLevel >= MaxLevel)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Upgrade] %s : %s already max level (%d)"),
+            *Ability->AbilityName.ToString(), *UpgradeName, CurrentLevel);
+        return;
+    }
+
+    // Coût du prochain niveau
+    float Cost = Stat->UpgradeCosts.IsValidIndex(CurrentLevel) ? Stat->UpgradeCosts[CurrentLevel] : 0.f;
+
+
+    if (PlayerRef->CurrentGold < Cost)
+    {
+        return;
+    }
+
+    // Paiement + upgrade
+    PlayerRef->AddGold(-Cost);
+    *LevelPtr += 1;
+
+}
+
+
+float UAbilityManagerComponent::GetUpgradeValue(const UAbilityData* Ability, const FString& UpgradeName) const
+{
+    if (!Ability) return 0.f;
+    const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(const_cast<UAbilityData*>(Ability)); // map clé non-const
+    if (!Levels) return 0.f;
+
+    const FAbilityUpgradeSet& Data = Ability->BaseUpgrades;
+
+    int32 Level = 0;
+    const TArray<float>* Values = nullptr;
+
+    // c'est long d'aligner ca a la main mais c'est joli
+    if      (UpgradeName == "Damage")           { Level = Levels->DamageLevel;          Values = &Data.Damage.EffectValues; }
+    else if (UpgradeName == "Cooldown")         { Level = Levels->CooldownLevel;        Values = &Data.Cooldown.EffectValues; }
+    else if (UpgradeName == "MultishotChance")  { Level = Levels->MultishotChanceLevel; Values = &Data.MultishotChance.EffectValues; }
+    else if (UpgradeName == "MultishotAmount")  { Level = Levels->MultishotAmountLevel; Values = &Data.MultishotAmount.EffectValues; }
+    else if (UpgradeName == "BounceChance")     { Level = Levels->BounceChanceLevel;    Values = &Data.BounceChance.EffectValues; }
+    else if (UpgradeName == "BounceAmount")     { Level = Levels->BounceAmountLevel;    Values = &Data.BounceAmount.EffectValues; }
+    else if (UpgradeName == "FrenzyChance")     { Level = Levels->FrenzyChanceLevel;    Values = &Data.FrenzyChance.EffectValues; }
+
+    if (!Values || Values->Num() == 0) return 0.f;
+    if (Values->IsValidIndex(Level)) return (*Values)[Level];
+    return Values->Last();
 }

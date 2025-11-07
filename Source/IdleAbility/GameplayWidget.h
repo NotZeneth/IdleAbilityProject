@@ -12,6 +12,7 @@ class UEditableTextBox;
 class UButton;
 class APlayerCharacter;
 class AWaveGameMode;
+class UShopWidget;
 
 UCLASS()
 class IDLEABILITY_API UGameplayWidget : public UUserWidget
@@ -35,6 +36,10 @@ protected:
     UPROPERTY(meta = (BindWidget)) UButton* ButtonAddGold;
     UPROPERTY(meta = (BindWidget)) UButton* ButtonAddGem;
     UPROPERTY(meta = (BindWidget)) UButton* ButtonJumpWave;
+    UPROPERTY(meta = (BindWidget)) UButton* ButtonShop;
+
+
+
 
     // --- UI update API ---
 public:
@@ -49,6 +54,18 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateWave(int Wave);
+
+    UFUNCTION()
+    void OnToggleShop();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UShopWidget> ShopWidgetClass;
+
+    UPROPERTY()
+    UShopWidget* ShopWidgetRef = nullptr;
+
+
+
 
 protected:
     // --- Boutons ---

@@ -2,12 +2,12 @@
 
 #pragma once
 
+#include "AbilityEffectData.h"
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "CustomCharacter.h" 
+#include "CustomCharacter.h"
 #include "AbilityData.generated.h"
 
-class UAbilityEffectData;
 
 UENUM(BlueprintType)
 enum class EAbilityTriggerType : uint8
@@ -34,6 +34,9 @@ class IDLEABILITY_API UAbilityData : public UDataAsset
 public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     FText AbilityName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+    FText Description;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     UTexture2D* Icon = nullptr;
@@ -69,4 +72,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
     TArray<UAbilityEffectData*> Effects;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrade")
+    FAbilityUpgradeSet BaseUpgrades;
+
+
 };

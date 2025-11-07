@@ -90,7 +90,6 @@ void AEnemyCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTyp
     if (!IsAlive() && PlayerRef && PlayerRef->AbilityManager)
     {
         UE_LOG(LogTemp, Warning, TEXT("%s est mort -> notify Player"), *GetName());
-        PlayerRef->AbilityManager->OnEnemyKilled(this); // Bon en vrai, ca ca pourrait être fait par le manager mais bon heu le temps
         GameModeRef->OnEnemyDied(this);
         Destroy(); // on détruit ICI
     }

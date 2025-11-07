@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "AbilityData.h"
 #include "AbilityEffectSpec.h"
+#include "AbilityEffectData.h"
 #include "AbilityManagerComponent.generated.h"
 
 // Spécifie une ability équipée par le joueur
@@ -25,6 +26,36 @@ struct FAbilitySpec
     bool isAutoCast = false;
 };
 
+// Pour les upgrades, relou i know mais faut garder leur lvl traqué hein
+USTRUCT(BlueprintType)
+struct FUpgradeLevels
+{
+    GENERATED_BODY();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 DamageLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 CooldownLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 MultishotChanceLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 MultishotAmountLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 BounceChanceLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 BounceAmountLevel = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 FrenzyChanceLevel = 0;
+};
+
+
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class IDLEABILITY_API UAbilityManagerComponent : public UActorComponent
 {
@@ -38,6 +69,8 @@ protected:
 
 public:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+    class APlayerCharacter* PlayerRef;
 
     // Liste d'abilities équipées
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Abilities")
@@ -81,5 +114,16 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Abilities")
     void ResetAllEffectsAndCooldowns();
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Upgrades")
+    TMap<UAbilityData*, FUpgradeLevels> UpgradeLevelsByAbility;
+
+    // Get current value of an upgrade (from data)
+    UFUNCTION(BlueprintCallable, Category = "Upgrades")
+    float GetUpgradeValue(const UAbilityData* Ability, const FString& UpgradeName) const;
+
+    // Upgrade a specific stat for an ability
+    UFUNCTION(BlueprintCallable, Category = "Upgrades")
+    void UpgradeAbility(UAbilityData* Ability, FString UpgradeName);
 
 };

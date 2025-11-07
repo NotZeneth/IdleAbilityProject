@@ -6,6 +6,7 @@
 #include "AbilityManagerComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "GameplayWidget.h"
 #include "Kismet/KismetMathLibrary.h"
 
 void AWaveGameMode::StartSpawning()
@@ -29,6 +30,7 @@ void AWaveGameMode::StartWave()
     }
 
     ++CurrentWave;
+    PlayerRef->GameplayWidgetRef->UpdateWave(CurrentWave);
     EnemiesLeftToSpawn = EnemiesPerWave;
 
     UE_LOG(LogTemp, Log, TEXT("[Wave] Start wave %d: spawning %d enemies"), CurrentWave, EnemiesLeftToSpawn);
@@ -73,8 +75,10 @@ void AWaveGameMode::OnEnemyDied(AEnemyCharacter* DeadEnemy) // called by the ene
 {
     EnemyList.Remove(DeadEnemy); // j'pense pending destroy donc ca permet quand meme de retirer sans probleme
 
+    // L'enemie pourrait call au joueur, mais c'est pas vraiment sa responsabilité je pense
     PlayerRef->AddGold(DeadEnemy->GoldOnDeath);
     PlayerRef->AddGem(DeadEnemy->GemOnDeath);
+    PlayerRef->AbilityManager->OnEnemyKilled(DeadEnemy);
 
     if (EnemiesLeftToSpawn == 0 && EnemyList.IsEmpty()) // Double check car un enemie peut se faire OS avant le spawn du prochain
     {
@@ -85,29 +89,30 @@ void AWaveGameMode::OnEnemyDied(AEnemyCharacter* DeadEnemy) // called by the ene
         PlayerRef->AbilityManager->ResetAllEffectsAndCooldowns();
     }
 }
-
 void AWaveGameMode::JumpToWave(int NewWave)
 {
     if (!PlayerRef || !PlayerRef->AbilityManager)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[Wave] JumpToWave impossible : pas de PlayerRef ou AbilityManager"));
         return;
-    }
-
     if (NewWave <= 0)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[Wave] JumpToWave ignoré : valeur invalide (%d)"), NewWave);
         return;
-    }
 
     UE_LOG(LogTemp, Warning, TEXT("[Wave] Jump vers la vague %d (reset des ennemis et effets)"), NewWave);
 
-    CurrentWave = NewWave - 1; // car incrémentée dans le startwave qui sera appelé a la mort de tous les enemis
-    for (AEnemyCharacter* Enemy : EnemyList)
+    // Copie locale pour éviter la modification concurrente
+    TArray<AEnemyCharacter*> EnemiesSnapshot = EnemyList;
+
+    CurrentWave = NewWave - 1;
+
+    for (AEnemyCharacter* Enemy : EnemiesSnapshot)
     {
         if (!Enemy || !Enemy->IsAlive())
             continue;
 
         Enemy->TakeCustomDamage(999999.f, EDamageType::Pure, PlayerRef);
     }
+
+    UE_LOG(LogTemp, Warning, TEXT("[Wave] JumpToWave terminé (ennemis nettoyés)"));
+
+    EnemyList.Empty();
 }
+
