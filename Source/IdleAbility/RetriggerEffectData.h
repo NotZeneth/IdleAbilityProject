@@ -12,14 +12,10 @@ class IDLEABILITY_API URetriggerEffectData : public URepeatedEffectData
     GENERATED_BODY()
 
 public:
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger",
-        meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger")
     float RetriggerChance = 1.0f;
 
-    // Nombre max de retriggers
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger",
-        meta = (ClampMin = "1"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger")
     int32 MaxTriggers = 1;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;

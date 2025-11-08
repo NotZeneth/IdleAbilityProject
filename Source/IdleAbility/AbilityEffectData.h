@@ -48,6 +48,8 @@ struct FAbilityUpgradeSet
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FUpgradeStat BounceChance;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FUpgradeStat BounceAmount;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FUpgradeStat FrenzyChance;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FUpgradeStat RetriggerChance;
+
 };
 
 // Context quand on applique un effet

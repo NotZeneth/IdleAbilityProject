@@ -30,25 +30,38 @@ bool URetriggerEffectData::ApplyEffect(const FAbilityEffectContext& Context) con
 
                 if (TicksPassed >= MaxTriggers)
                 {
-                    Spec.TimeRemaining = -99999.f; //  fin 
+                    Spec.TimeRemaining = -99999.f;
                     return false;
+                }
+
+                float Chance = RetriggerChance;
+                if (Manager && Context.Ability)
+                {
+                    const float UpChance = Manager->GetUpgradeValue(Context.Ability, TEXT("RetriggerChance"));
+                    const FAbilityUpgradeSet& Up = Context.Ability->BaseUpgrades;
+
+                    if (Up.RetriggerChance.EffectValues.Num() > 0)
+                        Chance = FMath::Clamp(UpChance, 0.f, 1.f);
                 }
 
                 const float Roll = FMath::FRand();
+                UE_LOG(LogTemp, Warning, TEXT("[Retrigger] Roll=%.2f | Chance=%.2f"), Roll, Chance);
 
-                if (Roll <= RetriggerChance)
+                if (Roll <= Chance)
                 {
                     UE_LOG(LogTemp, Warning,
                         TEXT("[Retrigger] Tick %d -> success (%.2f <= %.2f)"),
-                        TicksPassed, Roll, RetriggerChance);
+                        TicksPassed, Roll, Chance);
 
                     return URepeatedEffectData::ApplyEffect(Context);
                 }
-                else
-                {
-                    Spec.TimeRemaining = -99.f; //  fin 
-                    return false;
-                }
+
+                UE_LOG(LogTemp, Warning,
+                    TEXT("[Retrigger] Tick %d -> fail (%.2f > %.2f)"),
+                    TicksPassed, Roll, Chance);
+
+                Spec.TimeRemaining = -99.f;
+                return false;
             }
         }
     }

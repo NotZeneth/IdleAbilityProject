@@ -398,6 +398,8 @@ void UAbilityManagerComponent::UpgradeAbility(UAbilityData* Ability, FString Upg
     else if (UpgradeName == "BounceChance") Stat = &Data.BounceChance;
     else if (UpgradeName == "BounceAmount") Stat = &Data.BounceAmount;
     else if (UpgradeName == "FrenzyChance") Stat = &Data.FrenzyChance;
+    else if (UpgradeName == "RetriggerChance") Stat = &Data.RetriggerChance;
+
 
     if (!Stat || Stat->EffectValues.Num() == 0) return;
 
@@ -412,6 +414,8 @@ void UAbilityManagerComponent::UpgradeAbility(UAbilityData* Ability, FString Upg
     else if (UpgradeName == "BounceChance") LevelPtr = &Levels->BounceChanceLevel;
     else if (UpgradeName == "BounceAmount") LevelPtr = &Levels->BounceAmountLevel;
     else if (UpgradeName == "FrenzyChance") LevelPtr = &Levels->FrenzyChanceLevel;
+    else if (UpgradeName == "RetriggerChance") LevelPtr = &Levels->RetriggerChanceLevel;
+
 
     if (!LevelPtr) return;
 
@@ -445,13 +449,15 @@ float UAbilityManagerComponent::GetUpgradeValue(const UAbilityData* Ability, con
     int32 Level = 0;
     const TArray<float>* Values = nullptr;
 
-    if (UpgradeName == "Damage") { Level = Levels->DamageLevel;          Values = &Data.Damage.EffectValues; }
-    else if (UpgradeName == "Cooldown") { Level = Levels->CooldownLevel;        Values = &Data.Cooldown.EffectValues; }
+    if      (UpgradeName == "Damage")               { Level = Levels->DamageLevel;          Values = &Data.Damage.EffectValues; }
+    else if (UpgradeName == "Cooldown")        { Level = Levels->CooldownLevel;        Values = &Data.Cooldown.EffectValues; }
     else if (UpgradeName == "MultishotChance") { Level = Levels->MultishotChanceLevel; Values = &Data.MultishotChance.EffectValues; }
     else if (UpgradeName == "MultishotAmount") { Level = Levels->MultishotAmountLevel; Values = &Data.MultishotAmount.EffectValues; }
-    else if (UpgradeName == "BounceChance") { Level = Levels->BounceChanceLevel;    Values = &Data.BounceChance.EffectValues; }
-    else if (UpgradeName == "BounceAmount") { Level = Levels->BounceAmountLevel;    Values = &Data.BounceAmount.EffectValues; }
-    else if (UpgradeName == "FrenzyChance") { Level = Levels->FrenzyChanceLevel;    Values = &Data.FrenzyChance.EffectValues; }
+    else if (UpgradeName == "BounceChance")    { Level = Levels->BounceChanceLevel;    Values = &Data.BounceChance.EffectValues; }
+    else if (UpgradeName == "BounceAmount")    { Level = Levels->BounceAmountLevel;    Values = &Data.BounceAmount.EffectValues; }
+    else if (UpgradeName == "FrenzyChance")    { Level = Levels->FrenzyChanceLevel;    Values = &Data.FrenzyChance.EffectValues; }
+    else if (UpgradeName == "RetriggerChance") { Level = Levels->RetriggerChanceLevel; Values = &Data.RetriggerChance.EffectValues; }
+
 
     if (!Values || Values->Num() == 0) return 0.f;
     if (Values->IsValidIndex(Level)) return (*Values)[Level];

@@ -188,6 +188,8 @@ void UShopWidget::PopulateShop()
                     else if (Name == "BounceChance")     CurrentLevel = Levels->BounceChanceLevel;
                     else if (Name == "BounceAmount")     CurrentLevel = Levels->BounceAmountLevel;
                     else if (Name == "FrenzyChance")     CurrentLevel = Levels->FrenzyChanceLevel;
+                    else if (Name == "RetriggerChance")  CurrentLevel = Levels->RetriggerChanceLevel;
+
                 }
 
                 UTextBlock* BtnText = NewObject<UTextBlock>(this);
@@ -237,6 +239,8 @@ void UShopWidget::PopulateShop()
         MakeUpgradeButton(Ability, TEXT("BounceChance"), Upgrades.BounceChance);
         MakeUpgradeButton(Ability, TEXT("BounceAmount"), Upgrades.BounceAmount);
         MakeUpgradeButton(Ability, TEXT("FrenzyChance"), Upgrades.FrenzyChance);
+        MakeUpgradeButton(Ability, TEXT("RetriggerChance"), Upgrades.RetriggerChance);
+
 
         if (NumUpgrades == 0)
         {

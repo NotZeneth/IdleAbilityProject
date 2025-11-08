@@ -78,6 +78,8 @@ struct FUpgradeLevels
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 BounceChanceLevel = 0;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 BounceAmountLevel = 0;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 FrenzyChanceLevel = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 RetriggerChanceLevel = 0;
+
 };
 
 
