@@ -7,40 +7,51 @@
 
 bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
-    if (!Context.Source || !Context.Ability) return false;
+    if (!Context.Source || !Context.Ability)
+        return false;
 
     UAbilityManagerComponent* Manager = Context.Source->FindComponentByClass<UAbilityManagerComponent>();
-    if (!Manager) return false;
+    if (!Manager)
+        return false;
 
+    // --- Internal Cooldown (ICD) ---
     float& LastTime = Manager->LastFrenzyTimes.FindOrAdd(Context.Ability);
-    float Now = Context.Source->GetWorld()->TimeSeconds;
+    const float Now = Context.Source->GetWorld()->TimeSeconds;
 
-    // Premier cast : pas de cooldown
     if (LastTime > 0.0f && Now - LastTime < InternalCooldown)
     {
-        //UE_LOG(LogTemp, Warning, TEXT("[Frenzy] %s a lancé %s mais ICD pas fini (reste %.2fs)"),
-        //    *Context.Source->GetName(),
-        //    *Context.Ability->AbilityName.ToString(),
-        //    InternalCooldown - (Now - LastTime));
         return false;
     }
 
-    // Chance de proc
-    float EffectiveChance = Context.Source->FrenzyChance * ChanceMultiplier;
-    if (FMath::FRand() > EffectiveChance)
+    // --- Déterminer la chance de proc ---
+    float Chance = TriggerChance;
+
+    // si un track d’upgrade "FrenzyChance" existe, on prend la valeur correspondante
+    const FAbilityUpgradeSet& Up = Context.Ability->BaseUpgrades;
+    if (Up.FrenzyChance.EffectValues.Num() > 0)
+    {
+        const float UpChance = Manager->GetUpgradeValue(Context.Ability, TEXT("FrenzyChance"));
+        Chance = FMath::Clamp(UpChance, 0.f, 1.f);
+    }
+
+    // --- RNG ---
+    if (FMath::FRand() > Chance)
     {
         return false;
     }
 
-    // Si proc -> modifier le cooldown scalar
-    FAbilitySpec* Spec = Manager->EquippedAbilities.FindByPredicate([&](const FAbilitySpec& S) {
-        return S.Ability == Context.Ability;
-        });
+    // --- Appliquer le frenzy ---
+    FAbilitySpec* Spec = Manager->EquippedAbilities.FindByPredicate(
+        [&](const FAbilitySpec& S) { return S.Ability == Context.Ability; });
 
     if (Spec)
     {
-        Spec->CooldownScalar *= FrenzyScalar;
+        Spec->CooldownScalar *= FrenzyScalar; // réduction du cooldown (temporaire)
         LastTime = Now;
+
+        UE_LOG(LogTemp, Warning, TEXT("[Frenzy] Proc sur %s : chance=%.2f, scalar=%.2f"),
+            *Context.Ability->AbilityName.ToString(), Chance, FrenzyScalar);
+
         return true;
     }
 

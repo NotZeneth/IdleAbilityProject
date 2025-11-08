@@ -48,21 +48,43 @@ void AEnemyCharacter::BeginPlay()
 
 void AEnemyCharacter::ConfigStats(int Wave)
 {
-    MoveSpeed = FMath::CeilToFloat(200.f + Wave * (100 / (100 + DamagePerSec)));
-    DamagePerSec = FMath::CeilToFloat(DamagePerSec + Wave * (100 / (100 + DamagePerSec))); // diminishing return
+    const float BaseHP = MaxHP;
+    const float BaseDamage = DamagePerSec;
+    const float BaseGold = GoldOnDeath;
+    const float BaseGem = GemOnDeath;
 
-    MaxHP = MaxHP + Wave * (100 / (100 + MaxHP)); // max hp c'est la valeur de base set dans le BP en fait, ez 
-    MaxHP = FMath::CeilToFloat(MaxHP / 10) * 10; // arrondir a la dizaine superieure
+    // paramètres ajustables
+    const int WavesPerCycle = 10;
+    const float GlobalStepMultiplier = 1.3f;   // à chaque palier de 10 vagues, +30%
+    const float InCycleGrowth = 0.08f;         // croissance à l’intérieur d’un cycle (~8% par vague)
+
+    const int CycleIndex = (Wave - 1) / WavesPerCycle;   // ex : 0 pour vagues 1-10, 1 pour 11-20...
+    const int WaveInCycle = (Wave - 1) % WavesPerCycle;   // ex : 0..9
+
+    // croissance globale par palier
+    const float GlobalMultiplier = FMath::Pow(GlobalStepMultiplier, CycleIndex);
+
+    // croissance douce à l'intérieur du palier (commence lentement, accélère vers la fin)
+    const float LocalMultiplier = 1.0f + InCycleGrowth * FMath::Pow(WaveInCycle / (float)WavesPerCycle, 1.5f) * 10.f;
+
+    // multiplicateur final
+    const float HPScale = GlobalMultiplier * LocalMultiplier;
+    const float DmgScale = GlobalMultiplier * (0.7f + 0.3f * LocalMultiplier);
+    const float GoldScale = GlobalMultiplier * (0.8f + 0.5f * LocalMultiplier);
+    const float GemScale = GlobalMultiplier * (0.5f + 0.3f * LocalMultiplier);
+
+    MaxHP = FMath::CeilToFloat(BaseHP * HPScale / 10.f) * 10.f;
+    DamagePerSec = FMath::CeilToFloat(BaseDamage * DmgScale);
     CurrentHP = MaxHP;
+    GoldOnDeath = FMath::FloorToFloat(BaseGold * GoldScale);
+    GemOnDeath = FMath::FloorToFloat(BaseGem * GemScale);
 
-    GoldOnDeath = FMath::FloorToFloat(GoldOnDeath + Wave * (100 / (100 + GoldOnDeath)));
-    GemOnDeath = FMath::FloorToFloat(GemOnDeath + Wave * (100 / (100 + GoldOnDeath)));
-
+    // chance bonus inchangée
     GemOnDeath += (FMath::FRand() <= FullGemOnDeathChance) ? 1.f : 0.f;
 
-    UE_LOG(LogTemp, Warning, TEXT("Config stat done"));
+    UE_LOG(LogTemp, Warning, TEXT("[Wave %d] Cycle %d | HPx%.2f Dmgx%.2f Goldx%.2f"),
+        Wave, CycleIndex, HPScale, DmgScale, GoldScale);
 }
-
 
 void AEnemyCharacter::Tick(float DeltaTime)
 {

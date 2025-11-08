@@ -49,16 +49,22 @@ void UAbilityBarWidget::RefreshButtons()
     const int32 NumAbilities = AbilityManager->EquippedAbilities.Num();
     UE_LOG(LogTemp, Log, TEXT("[AbilityBar] Création de %d boutons d'abilities"), NumAbilities);
 
-    for (int32 i = 0; i < NumAbilities; ++i)
+    for (int32 i = 0; i < AbilityManager->EquippedAbilities.Num(); ++i)
     {
+        const FAbilitySpec& Spec = AbilityManager->EquippedAbilities[i];
+        if (!Spec.Ability) continue;
+
+        // ne pas créer de bouton si l’ability n'est pas encore débloquée
+        if (!Spec.bUnlocked) continue;
+
         UAbilityButtonWidget* Button = CreateWidget<UAbilityButtonWidget>(GetWorld(), AbilityButtonClass);
         if (!Button) continue;
 
-        // Assigne l’index et le manager (important)
         Button->AbilityIndex = i;
         Button->AbilityManager = AbilityManager;
 
-        // Ajoute dans le container horizontal
         ButtonContainer->AddChildToHorizontalBox(Button);
     }
+
+
 }

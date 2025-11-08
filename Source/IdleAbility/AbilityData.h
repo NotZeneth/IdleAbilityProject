@@ -73,8 +73,13 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
     TArray<UAbilityEffectData*> Effects;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop") bool bUnlocked = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop") int32 GemCostToUnlock = 1;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrade")
     FAbilityUpgradeSet BaseUpgrades;
+
+
 
 
 };

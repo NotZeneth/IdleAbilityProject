@@ -63,4 +63,6 @@ public:
     void AddGem(float amount);
 
     virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;
+
+
 };

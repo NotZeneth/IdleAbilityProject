@@ -81,16 +81,46 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     // --- Gestion du Multishot RNG ---
     if (bEnableMultishot)
     {
-        const float RollChance = Caster->MultishotChance * ChanceMultiplier;
-        const float RandRoll = FMath::FRand();
+        // 1) Detecter si des upgrades existent sur cette ability
+        bool bHasChanceUpgrade = false;
+        bool bHasAmountUpgrade = false;
 
-        if (RandRoll <= RollChance)
+        if (Context.Ability)
+        {
+            const FAbilityUpgradeSet& Up = Context.Ability->BaseUpgrades;
+            bHasChanceUpgrade = (Up.MultishotChance.EffectValues.Num() > 0);
+            bHasAmountUpgrade = (Up.MultishotAmount.EffectValues.Num() > 0);
+        }
+
+        // 2) Lire les valeurs
+        float Chance = MultishotChance;                 // fallback: chance definie sur l'effet (0..1)
+        int32 Amount = MultishotAmount;                  // fallback: amount defini sur l'effet
+
+        if (Manager && Context.Ability)
+        {
+            if (bHasChanceUpgrade)
+            {
+                const float UpChance = Manager->GetUpgradeValue(Context.Ability, TEXT("MultishotChance"));
+                // on suppose que les tracks d’upgrade stockent des chances 0..1
+                Chance = FMath::Clamp(UpChance, 0.f, 1.f);
+            }
+
+            if (bHasAmountUpgrade)
+            {
+                const float UpAmount = Manager->GetUpgradeValue(Context.Ability, TEXT("MultishotAmount"));
+                Amount = FMath::Max(0, static_cast<int32>(FMath::RoundToInt(UpAmount)));
+            }
+        }
+
+        // 3) RNG sur la chance calculee
+        const float RandRoll = FMath::FRand();
+        if (RandRoll <= Chance && Amount > 0)
         {
             // Cherche d'autres ennemis
             TArray<ACustomCharacter*> Candidates;
             Manager->GetEnemiesInRange(Caster, Context.Ability->Range, Candidates);
 
-            // Retirer la cible principale de la liste
+            // Retirer la cible principale
             if (Context.Target)
                 Candidates.Remove(Context.Target);
 
@@ -102,12 +132,10 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
 
             Algo::RandomShuffle(Candidates);
 
-            // MultishotAmount = nombre de projectiles supplémentaires
-            const int32 ExtraShots = FMath::Min(Caster->MultishotAmount, Candidates.Num());
+            // Limiter par le nombre de candidats
+            const int32 ExtraShots = FMath::Min(Amount, Candidates.Num());
+            UE_LOG(LogTemp, Warning, TEXT("[Multishot] Proc -> %d projectiles supplementaires (Chance=%.2f)"), ExtraShots, Chance);
 
-            UE_LOG(LogTemp, Warning, TEXT("[Multishot] Proc -> %d projectiles supplementaires"), ExtraShots);
-
-            // Tirer sur d'autres cibles UNIQUES
             for (int32 i = 0; i < ExtraShots; ++i)
             {
                 ACustomCharacter* ExtraTarget = Candidates[i];
@@ -118,12 +146,10 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
                 SpawnSingleProjectile(ExtraTarget, YawOffset);
             }
         }
-
         else
         {
-            UE_LOG(LogTemp, Verbose, TEXT("[Multishot] Échec (%.2f > %.2f)"), RandRoll, RollChance);
+            UE_LOG(LogTemp, Verbose, TEXT("[Multishot] Echec (roll=%.2f > chance=%.2f) ou amount=0"), RandRoll, Chance);
         }
     }
-
     return true;
 }

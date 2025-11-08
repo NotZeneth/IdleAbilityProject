@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Algo/RandomShuffle.h"
 #include "WaveGameMode.h"
+#include "GameplayWidget.h"
 #include "PlayerCharacter.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
@@ -23,13 +24,18 @@ void UAbilityManagerComponent::BeginPlay()
         GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
     }
 
-    for (const FAbilitySpec& Spec : EquippedAbilities)
+    for (FAbilitySpec& Spec : EquippedAbilities)
     {
         if (Spec.Ability)
         {
+            // initialise les niveaux d'upgrade
             UpgradeLevelsByAbility.Add(Spec.Ability, FUpgradeLevels());
+
+            // synchronise l'état "débloqué par défaut" depuis le DataAsset
+            Spec.bUnlocked = Spec.Ability->bUnlocked;
         }
     }
+
 
 
 
@@ -162,14 +168,33 @@ void UAbilityManagerComponent::TryActivateAbility(int32 AbilityIndex)
 
     ExecuteAbility(Spec);
 
-    // Cooldown ajusté
+    // ===============================
+    // Cooldown computation (with per-level base CD)
+    // ===============================
+
+    // 1) BaseCd from ability: if upgrade values exist, pick the one matching current level.
+    //    Fallback to the single Ability->Cooldown otherwise.
     float BaseCd = Spec.Ability->Cooldown;
-    float Scalar = Spec.CooldownScalar;
-    float Cdr = 1.f - Caster->CooldownReduction;
+    {
+        const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(Spec.Ability);
+        const TArray<float>& Values = Spec.Ability->BaseUpgrades.Cooldown.EffectValues;
 
-    float FinalCooldown = BaseCd * Scalar * Cdr;
-    if (FinalCooldown < 0.1f) FinalCooldown = 0.05f;
+        if (Levels && Values.Num() > 0)
+        {
+            const int32 Level = Levels->CooldownLevel;
+            BaseCd = Values.IsValidIndex(Level) ? Values[Level] : Values.Last();
+        }
+    }
 
+    // 2) Runtime scalar (Frenzy etc.) keeps working via Spec.CooldownScalar.
+    //    This is modified by Frenzy/UnFrenzy effects elsewhere.
+    const float RuntimeScalar = Spec.CooldownScalar;
+
+    // 4) Final cooldown = Base * RuntimeScalar * CDR multiplier
+    float FinalCooldown = BaseCd * RuntimeScalar;
+
+    // 5) Safety clamp then apply
+    FinalCooldown = FMath::Max(0.05f, FinalCooldown);
     Spec.CooldownEndTime = GetWorld()->TimeSeconds + FinalCooldown;
 }
 
@@ -490,3 +515,64 @@ float UAbilityManagerComponent::GetUpgradeValue(const UAbilityData* Ability, con
     if (Values->IsValidIndex(Level)) return (*Values)[Level];
     return Values->Last();
 }
+
+bool UAbilityManagerComponent::UpgradePlayerStat(const FString& StatName)
+{
+    if (!PlayerRef) return false;
+
+    FPlayerUpgrade* Target = nullptr;
+
+    if (StatName == "AttackFlat")   Target = &AttackFlat;
+    else if (StatName == "MaxHPFlat")    Target = &MaxHPFlat;
+    else if (StatName == "AttackPercent")Target = &AttackPercent;
+    else if (StatName == "HPPercent")    Target = &HPPercent;
+
+    if (!Target) return false;
+
+    const float Cost = Target->GetNextCost();
+    if (PlayerRef->CurrentGold < Cost)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Pas assez d'or pour %s (%.0f requis)"), *StatName, Cost);
+        return false;
+    }
+
+    // Paiement et incrément
+    PlayerRef->AddGold(-Cost);
+    Target->Level++;
+
+    UE_LOG(LogTemp, Log, TEXT("[Upgrade] %s -> Lvl %d | Nouveau coût = %.0f"), *StatName, Target->Level, Target->GetNextCost());
+
+    // Application
+    if (StatName == "AttackFlat")
+    {
+        PlayerRef->Attack = Target->GetCurrentValue();
+    }
+    else if (StatName == "MaxHPFlat")
+    {
+        PlayerRef->MaxHP = Target->GetCurrentValue();
+        PlayerRef->CurrentHP = FMath::Clamp(PlayerRef->CurrentHP, 0.f, PlayerRef->MaxHP);
+        if (PlayerRef->GameplayWidgetRef)
+            PlayerRef->GameplayWidgetRef->UpdateHealth(PlayerRef->CurrentHP, PlayerRef->MaxHP);
+    }
+    else if (StatName == "AttackPercent")
+    {
+        // +1% par niveau -> multiplicateur total
+        PlayerRef->AttackMultiplier = 1.0f + (Target->Level * 0.01f);
+    }
+    else if (StatName == "HPPercent")
+    {
+        // +1% par niveau -> multiplier les HP plats
+        const float FlatHP = MaxHPFlat.GetCurrentValue();
+        const float NewMax = FlatHP * (1.0f + Target->Level * 0.01f);
+
+        const float Ratio = (PlayerRef->MaxHP > 0.f) ? (PlayerRef->CurrentHP / PlayerRef->MaxHP) : 1.f;
+        PlayerRef->MaxHP = NewMax;
+        PlayerRef->CurrentHP = FMath::Clamp(NewMax * Ratio, 0.f, NewMax);
+
+        if (PlayerRef->GameplayWidgetRef)
+            PlayerRef->GameplayWidgetRef->UpdateHealth(PlayerRef->CurrentHP, PlayerRef->MaxHP);
+    }
+
+    return true;
+}
+

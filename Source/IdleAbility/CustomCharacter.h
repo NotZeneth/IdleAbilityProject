@@ -54,9 +54,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float IgnoreDmgReduction = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float CooldownReduction = 0.f; // peut être négatif
-
     // --- Effets secondaires ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float MultishotChance = 0.1f;

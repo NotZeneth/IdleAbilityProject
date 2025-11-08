@@ -101,4 +101,5 @@ public:
     TArray<UAbilityEffectData*> SubEffects;
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const { return true; }
+
 };

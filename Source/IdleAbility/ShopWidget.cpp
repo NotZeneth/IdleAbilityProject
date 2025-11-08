@@ -5,6 +5,8 @@
 #include "AbilityData.h"
 #include "AbilityManagerComponent.h"
 #include "PlayerCharacter.h"
+#include "GameplayWidget.h"
+#include "AbilityBarWidget.h"
 
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -23,6 +25,22 @@ void UShopUpgradeButton::HandleClicked()
         OwnerWidget->OnUpgradeButtonClicked(this);
     }
 }
+
+void UPlayerUpgradeButton::HandleClicked()
+{
+    if (OwnerWidget)
+    {
+        OwnerWidget->OnPlayerUpgradeClicked(StatName);
+    }
+}
+void UUnlockAbilityButton::HandleClicked()
+{
+    if (OwnerWidget)
+    {
+        OwnerWidget->OnUnlockAbilityClicked(Ability);
+    }
+}
+
 
 // ---------- UShopWidget ----------
 void UShopWidget::NativeConstruct()
@@ -53,6 +71,9 @@ void UShopWidget::PopulateShop()
         return;
 
     ShopListBox->ClearChildren();
+
+    // Section Player Upgrades (ta fonction existante)
+    PopulatePlayerUpgrades();
 
     for (const FAbilitySpec& Spec : AbilityManager->EquippedAbilities)
     {
@@ -101,7 +122,42 @@ void UShopWidget::PopulateShop()
             EntryBox->AddChildToVerticalBox(Desc);
         }
 
-        // --- Label Upgrades ---
+        // === (NOUVEAU) Ability lockée ? Affiche un bouton "Unlock" puis passe à la suivante ===
+        if (!Spec.bUnlocked)
+        {
+            const int32 Cost = Ability->GemCostToUnlock;
+
+            UUnlockAbilityButton* UnlockBtn = NewObject<UUnlockAbilityButton>(this);
+            UnlockBtn->OwnerWidget = this;
+            UnlockBtn->Ability = Ability;
+            UnlockBtn->OnClicked.AddDynamic(UnlockBtn, &UUnlockAbilityButton::HandleClicked);
+            UnlockBtn->SetBackgroundColor(FLinearColor(0.1f, 0.1f, 0.1f, 1.f));
+
+            UTextBlock* UnlockText = NewObject<UTextBlock>(this);
+            UnlockText->SetJustification(ETextJustify::Center);
+            UnlockText->SetText(FText::FromString(FString::Printf(TEXT("Unlock for %d Gems"), Cost)));
+            UnlockBtn->SetContent(UnlockText);
+
+            // Feedback si pas assez de gemmes (grisé)
+            if (AbilityManager->PlayerRef)
+            {
+                const bool bCanAfford = AbilityManager->PlayerRef->CurrentGem >= Cost;
+                UnlockBtn->SetIsEnabled(bCanAfford);
+            }
+
+            EntryBox->AddChildToVerticalBox(UnlockBtn);
+
+            // Espacement sous la carte
+            UTextBlock* Spacer = NewObject<UTextBlock>(this);
+            Spacer->SetText(FText::GetEmpty());
+            Spacer->SetMargin(FMargin(0, 0, 0, 10));
+            ShopListBox->AddChild(Spacer);
+
+            // On ne montre PAS les upgrades tant que non débloquée
+            continue;
+        }
+
+        // --- Label Upgrades (ability déjà débloquée) ---
         UTextBlock* Label = NewObject<UTextBlock>(this);
         Label->SetText(FText::FromString(TEXT("Available Upgrades:")));
         EntryBox->AddChildToVerticalBox(Label);
@@ -109,7 +165,7 @@ void UShopWidget::PopulateShop()
         const FAbilityUpgradeSet& Upgrades = Ability->BaseUpgrades;
         int32 NumUpgrades = 0;
 
-        // --- Créateur de bouton ---
+        // --- Créateur de bouton (inchangé) ---
         auto MakeUpgradeButton = [&](UAbilityData* InAbility, const FString& Name, const FUpgradeStat& Stat)
             {
                 if (Stat.UpgradeCosts.Num() == 0) return;
@@ -120,7 +176,7 @@ void UShopWidget::PopulateShop()
                 Button->UpgradeName = Name;
                 Button->OwnerWidget = this;
 
-                // On récupère le niveau actuel depuis le manager
+                // Niveau actuel depuis le manager
                 int32 CurrentLevel = 0;
                 if (const FUpgradeLevels* Levels = AbilityManager->UpgradeLevelsByAbility.Find(InAbility))
                 {
@@ -135,21 +191,34 @@ void UShopWidget::PopulateShop()
 
                 UTextBlock* BtnText = NewObject<UTextBlock>(this);
 
-                // Si max level -> message spécifique
-                if (CurrentLevel >= Stat.EffectValues.Num())
+                // Max level ?
+                if (CurrentLevel >= Stat.EffectValues.Num() - 1)
                 {
-                    BtnText->SetText(FText::FromString(FString::Printf(TEXT("%s: MAX (Lvl %d)"), *Name, CurrentLevel)));
+                    const float ValueAtMax = Stat.EffectValues.IsValidIndex(CurrentLevel)
+                        ? Stat.EffectValues[CurrentLevel]
+                        : (Stat.EffectValues.Num() > 0 ? Stat.EffectValues.Last() : 0.f);
+
+                    BtnText->SetText(FText::FromString(
+                        FString::Printf(TEXT("[Lvl %d] %s : %.1f (MAX)"),
+                            CurrentLevel + 1, *Name, ValueAtMax)));
+
                     Button->SetIsEnabled(false);
                 }
                 else
                 {
-                    // Valeur et coût du prochain niveau
-                    const float Value = Stat.EffectValues.IsValidIndex(CurrentLevel) ? Stat.EffectValues[CurrentLevel] : Stat.EffectValues.Last();
-                    const float Cost = Stat.UpgradeCosts.IsValidIndex(CurrentLevel) ? Stat.UpgradeCosts[CurrentLevel] : Stat.UpgradeCosts.Last();
+                    const float Value = Stat.EffectValues.IsValidIndex(CurrentLevel)
+                        ? Stat.EffectValues[CurrentLevel]
+                        : (Stat.EffectValues.Num() > 0 ? Stat.EffectValues.Last() : 0.f);
+
+                    const float Cost = Stat.UpgradeCosts.IsValidIndex(CurrentLevel)
+                        ? Stat.UpgradeCosts[CurrentLevel]
+                        : (Stat.UpgradeCosts.Num() > 0 ? Stat.UpgradeCosts.Last() : 0.f);
 
                     BtnText->SetText(FText::FromString(
-                        FString::Printf(TEXT("%s Lvl %d -> +%.1f (Cost %.0f)"), *Name, CurrentLevel, Value, Cost)
-                    ));
+                        FString::Printf(TEXT("[Lvl %d] %s : %.1f (Upgrade : %.0f gold)"),
+                            CurrentLevel + 1, *Name, Value, Cost)));
+
+                    Button->SetIsEnabled(true);
                 }
 
                 BtnText->SetJustification(ETextJustify::Center);
@@ -160,8 +229,7 @@ void UShopWidget::PopulateShop()
                 EntryBox->AddChildToVerticalBox(Button);
             };
 
-
-        // --- Crée les boutons ---
+        // --- Crée les boutons d'upgrade (ability débloquée) ---
         MakeUpgradeButton(Ability, TEXT("Damage"), Upgrades.Damage);
         MakeUpgradeButton(Ability, TEXT("Cooldown"), Upgrades.Cooldown);
         MakeUpgradeButton(Ability, TEXT("MultishotChance"), Upgrades.MultishotChance);
@@ -187,6 +255,105 @@ void UShopWidget::PopulateShop()
 }
 
 
+void UShopWidget::PopulatePlayerUpgrades()
+{
+    if (!AbilityManager || !ShopListBox)
+        return;
+
+    // --- Carte visuelle globale ---
+    UBorder* PlayerCard = NewObject<UBorder>(this);
+    PlayerCard->SetPadding(FMargin(8));
+    PlayerCard->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.35f)); // fond semi-transparent
+    ShopListBox->AddChild(PlayerCard);
+
+    UVerticalBox* EntryBox = NewObject<UVerticalBox>(this);
+    PlayerCard->SetContent(EntryBox);
+
+    // --- Titre ---
+    UTextBlock* Header = NewObject<UTextBlock>(this);
+    Header->SetText(FText::FromString(TEXT("PLAYER UPGRADES")));
+    Header->SetJustification(ETextJustify::Center);
+    Header->SetColorAndOpacity(FSlateColor(FLinearColor(1.f, 0.9f, 0.3f))); // doré
+    {
+        FSlateFontInfo Font = Header->GetFont();
+        Font.Size = 20;
+        Header->SetFont(Font);
+    }
+    EntryBox->AddChildToVerticalBox(Header);
+
+    // --- petit espace sous le titre ---
+    UTextBlock* SpacerTop = NewObject<UTextBlock>(this);
+    SpacerTop->SetText(FText::GetEmpty());
+    SpacerTop->SetMargin(FMargin(0, 0, 0, 5));
+    EntryBox->AddChildToVerticalBox(SpacerTop);
+
+    auto MakeButton = [&](const FString& StatName, const FString& Label)
+        {
+            FPlayerUpgrade* Stat = nullptr;
+            if (StatName == "AttackFlat")    Stat = &AbilityManager->AttackFlat;
+            else if (StatName == "MaxHPFlat")     Stat = &AbilityManager->MaxHPFlat;
+            else if (StatName == "AttackPercent") Stat = &AbilityManager->AttackPercent;
+            else if (StatName == "HPPercent")     Stat = &AbilityManager->HPPercent;
+            if (!Stat) return;
+
+            const int32 Lvl = Stat->Level;
+            const float Val = Stat->GetCurrentValue();
+            const float Cost = Stat->GetNextCost();
+
+            UPlayerUpgradeButton* Button = NewObject<UPlayerUpgradeButton>(this);
+            Button->OwnerWidget = this;
+            Button->StatName = StatName;
+            Button->OnClicked.AddDynamic(Button, &UPlayerUpgradeButton::HandleClicked);
+            Button->SetBackgroundColor(FLinearColor(0.18f, 0.18f, 0.18f, 1.f));
+
+            // ajoute un petit espace horizontal à l’intérieur du texte
+            UHorizontalBox* InnerBox = NewObject<UHorizontalBox>(this);
+            UHorizontalBoxSlot* TxtSlot = nullptr;
+
+
+            UTextBlock* BtnText = NewObject<UTextBlock>(this);
+            FString Line;
+
+            if (StatName == "AttackPercent" || StatName == "HPPercent")
+                Line = FString::Printf(TEXT("[Lvl %d] %s : +%d%% (Cost: %.0f gold)"), Lvl, *Label, Lvl, Cost);
+            else
+                Line = FString::Printf(TEXT("[Lvl %d] %s : %.0f (Cost: %.0f gold)"), Lvl, *Label, Val, Cost);
+
+            BtnText->SetText(FText::FromString(Line));
+            BtnText->SetJustification(ETextJustify::Center);
+            BtnText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f)));
+
+            {
+                FSlateFontInfo Font = BtnText->GetFont();
+                Font.Size = 14;
+                BtnText->SetFont(Font);
+            }
+
+            Button->SetContent(BtnText);
+            EntryBox->AddChildToVerticalBox(Button);
+
+            // Espacement léger sous chaque bouton
+            UTextBlock* SmallSpacer = NewObject<UTextBlock>(this);
+            SmallSpacer->SetText(FText::GetEmpty());
+            SmallSpacer->SetMargin(FMargin(0, 0, 0, 4));
+            EntryBox->AddChildToVerticalBox(SmallSpacer);
+        };
+
+    // --- 4 boutons ---
+    MakeButton("AttackFlat", "Attack");
+    MakeButton("MaxHPFlat", "Max HP");
+    MakeButton("AttackPercent", "Attack %");
+    MakeButton("HPPercent", "HP %");
+
+    // --- espacement avant les abilities ---
+    UTextBlock* SpacerBottom = NewObject<UTextBlock>(this);
+    SpacerBottom->SetText(FText::GetEmpty());
+    SpacerBottom->SetMargin(FMargin(0, 0, 0, 10));
+    ShopListBox->AddChild(SpacerBottom);
+}
+
+
+
 
 void UShopWidget::OnUpgradeButtonClicked(UShopUpgradeButton* Btn)
 {
@@ -200,3 +367,77 @@ void UShopWidget::OnUpgradeButtonClicked(UShopUpgradeButton* Btn)
 
     PopulateShop(); // refresh
 }
+
+void UShopWidget::OnPlayerUpgradeClicked(const FString& StatName)
+{
+    if (!AbilityManager) return;
+
+    if (AbilityManager->UpgradePlayerStat(StatName))
+    {
+        ShopListBox->ClearChildren();
+        PopulatePlayerUpgrades();
+        PopulateShop();
+    }
+
+    if (AbilityManager && AbilityManager->PlayerRef && AbilityManager->PlayerRef->GameplayWidgetRef)
+    {
+        UGameplayWidget* GameplayWidget = AbilityManager->PlayerRef->GameplayWidgetRef;
+
+        if (AbilityManager->PlayerRef->AbilityWidgetRef)
+        {
+            AbilityManager->PlayerRef->AbilityWidgetRef->RefreshButtons();
+        }
+    }
+
+}
+
+void UShopWidget::OnUnlockAbilityClicked(UAbilityData* Ability)
+{
+    if (!Ability || !AbilityManager || !AbilityManager->PlayerRef) return;
+
+    APlayerCharacter* Player = AbilityManager->PlayerRef;
+
+    FAbilitySpec* FoundSpec = nullptr;
+    for (FAbilitySpec& Spec : AbilityManager->EquippedAbilities)
+    {
+        if (Spec.Ability == Ability)
+        {
+            FoundSpec = &Spec;
+            break;
+        }
+    }
+
+    if (!FoundSpec)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SHOP] Ability non trouvée dans les specs du joueur"));
+        return;
+    }
+
+    if (FoundSpec->bUnlocked)
+        return;
+
+    const int32 Cost = Ability->GemCostToUnlock;
+
+    if (Player->CurrentGem >= Cost)
+    {
+        Player->AddGem(-Cost);
+        FoundSpec->bUnlocked = true; //  on modifie le Spec
+
+        UE_LOG(LogTemp, Log, TEXT("[SHOP] Unlocked %s for %d gems"),
+            *Ability->AbilityName.ToString(), Cost);
+
+        PopulateShop(); // refresh UI shop
+
+        // refresh de la barre (déjà ajouté)
+        if (Player->AbilityWidgetRef)
+        {
+            Player->AbilityWidgetRef->RefreshButtons();
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SHOP] Not enough gems to unlock %s (need %d)"),
+            *Ability->AbilityName.ToString(), Cost);
+    }
+}
+

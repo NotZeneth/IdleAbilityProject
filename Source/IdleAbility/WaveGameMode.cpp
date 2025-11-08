@@ -47,12 +47,31 @@ void AWaveGameMode::StartWave()
 
 void AWaveGameMode::SpawnEnemy()
 {
-    if (!EnemyClass) return;
+    TSubclassOf<AEnemyCharacter> ClassToSpawn = EnemyClass;
+
+    const int32 LastDigit = CurrentWave % 10;
+
+    if (LastDigit == 5 && MiniBossClass)
+    {
+        ClassToSpawn = MiniBossClass;
+        EffectiveNumberToSpawnThisWave = 4; 
+    }
+    else if (LastDigit == 0 && BossClass)
+    {
+        ClassToSpawn = BossClass;
+        EffectiveNumberToSpawnThisWave = 1; // forcer un seul spawn
+    }
+    else
+    {
+        EffectiveNumberToSpawnThisWave = EnemiesPerWave;
+    }
+
+    if (!ClassToSpawn) return;
 
     FActorSpawnParameters Params;
     Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    AEnemyCharacter* Enemy = GetWorld()->SpawnActor<AEnemyCharacter>(EnemyClass, SpawnLocation, FRotator(0,180,0), Params);
+    AEnemyCharacter* Enemy = GetWorld()->SpawnActor<AEnemyCharacter>(ClassToSpawn, SpawnLocation, FRotator(0, 180, 0), Params);
     if (!Enemy)
     {
         UE_LOG(LogTemp, Warning, TEXT("[Wave] Failed to spawn enemy"));
@@ -62,14 +81,16 @@ void AWaveGameMode::SpawnEnemy()
     Enemy->GameModeRef = this;
     EnemyList.Add(Enemy);
     Enemy->ConfigStats(CurrentWave);
-    UE_LOG(LogTemp, Log, TEXT("Spawned Enemy"));
+
+    UE_LOG(LogTemp, Log, TEXT("[Wave] Spawned %s (Wave %d)"), *ClassToSpawn->GetName(), CurrentWave);
 
     EnemiesLeftToSpawn -= 1;
-    if (EnemiesLeftToSpawn > 0) // On appelle recursivement tant qu'il faut encore spawn
+    if (EnemiesLeftToSpawn > 0)
     {
         GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AWaveGameMode::SpawnEnemy, SpawnInterval, false);
     }
 }
+
 
 void AWaveGameMode::OnEnemyDied(AEnemyCharacter* DeadEnemy) // called by the enemy itself
 {

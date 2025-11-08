@@ -19,12 +19,23 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
     FVector SpawnLocation;
 
-    // Enemy blueprint/class to spawn
+    // Classe des ennemis standards
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
     TSubclassOf<AEnemyCharacter> EnemyClass;
 
+    // Classe des mini-boss (vagues se terminant par 5)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    TSubclassOf<AEnemyCharacter> MiniBossClass;
+
+    // Classe des boss (vagues se terminant par 0)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    TSubclassOf<AEnemyCharacter> BossClass;
+
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
     int32 EnemiesPerWave = 4;
+
+    int32 EffectiveNumberToSpawnThisWave = 4;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
     float SpawnInterval = 0.5f;

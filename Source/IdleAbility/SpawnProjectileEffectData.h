@@ -37,7 +37,10 @@ public:
     bool bEnableMultishot = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot", meta = (EditCondition = "bEnableMultishot"))
-    float ChanceMultiplier = 1.0f;
+    float MultishotChance = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot", meta = (EditCondition = "bEnableMultishot"))
+    int MultishotAmount = 1;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Multishot", meta = (EditCondition = "bEnableMultishot"))
     float SpreadAngleDeg = 10.f;

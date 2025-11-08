@@ -9,6 +9,50 @@
 #include "AbilityEffectData.h"
 #include "AbilityManagerComponent.generated.h"
 
+USTRUCT(BlueprintType)
+struct FPlayerUpgrade
+{
+    GENERATED_BODY();
+
+    // Nom (facultatif, juste pratique pour debug)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Name;
+
+    // Niveau actuel
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 Level = 0;
+
+    // Valeur de base (ex : 10 d’attaque ou 100 PV)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float BaseValue = 0.f;
+
+    // Croissance exponentielle (ex : 1.15 = +15% par niveau)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float ValueGrowth = 1.15f;
+
+    // Coût de base de la première upgrade
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float BaseCost = 100.f;
+
+    // Croissance du coût (ex : 1.25 = +25% par niveau)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float CostGrowth = 1.25f;
+
+    // Donne la valeur actuelle selon le niveau
+    float GetCurrentValue() const
+    {
+        return BaseValue * FMath::Pow(ValueGrowth, Level);
+    }
+
+    // Donne le coût de la prochaine upgrade
+    float GetNextCost() const
+    {
+        return BaseCost * FMath::Pow(CostGrowth, Level);
+    }
+};
+
+
+
 // Spécifie une ability équipée par le joueur
 USTRUCT(BlueprintType)
 struct FAbilitySpec
@@ -24,6 +68,9 @@ struct FAbilitySpec
     // c'est le widget qui va dire si on le passe en auto, c'est pas ideal mais ca fonctionne
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
     bool isAutoCast = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
+    bool bUnlocked = false;
 };
 
 // Pour les upgrades, relou i know mais faut garder leur lvl traqué hein
@@ -125,5 +172,24 @@ public:
     // Upgrade a specific stat for an ability
     UFUNCTION(BlueprintCallable, Category = "Upgrades")
     void UpgradeAbility(UAbilityData* Ability, FString UpgradeName);
+
+    // --- Upgrades du joueur ---
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades|Player")
+    FPlayerUpgrade AttackFlat;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades|Player")
+    FPlayerUpgrade MaxHPFlat;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades|Player")
+    FPlayerUpgrade AttackPercent;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades|Player")
+    FPlayerUpgrade HPPercent;
+
+    // Upgrade d'une stat (flat ou %)
+    UFUNCTION(BlueprintCallable, Category = "Upgrades|Player")
+    bool UpgradePlayerStat(const FString& StatName);
+
+
 
 };
