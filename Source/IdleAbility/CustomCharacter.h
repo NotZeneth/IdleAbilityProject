@@ -45,8 +45,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float HpRegenPercent = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
+    UPROPERTY()
     float Attack = 10.f;
+
 
     // On en utilise pas atm mais le code est la
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Defense")
@@ -58,7 +59,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Defense")
     float IgnoreDmgReduction = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    UPROPERTY()
     int32 MaxBounces = 3;
 
     UFUNCTION(BlueprintCallable, Category = "Combat")

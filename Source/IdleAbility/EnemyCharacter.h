@@ -46,14 +46,14 @@ public:
 
     // ------------------------------------------------------------
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float MoveSpeed = 200.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float DamagePerSec = 10.f;
 
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float AttackRange = 100.f;
 
 

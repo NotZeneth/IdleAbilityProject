@@ -104,6 +104,12 @@ void UGameplayWidget::OnToggleShop()
         {
             ShopWidgetRef->PopulateShop(); // refresh
         }
+
+        if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+        {
+            PC->SetPause(true);
+        }
     }
+
 }
 

@@ -41,7 +41,6 @@ void UUnlockAbilityButton::HandleClicked()
 }
 
 
-// ---------- UShopWidget ----------
 void UShopWidget::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -49,6 +48,11 @@ void UShopWidget::NativeConstruct()
     if (APlayerCharacter* Player = Cast<APlayerCharacter>(GetOwningPlayerPawn()))
     {
         AbilityManager = Player->FindComponentByClass<UAbilityManagerComponent>();
+    }
+
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        PC->SetPause(true);
     }
 
     if (ButtonClose)
@@ -61,6 +65,12 @@ void UShopWidget::NativeConstruct()
 
 void UShopWidget::OnCloseClicked()
 {
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        PC->SetPause(false);
+        PC->bShowMouseCursor = false;
+    }
+
     SetVisibility(ESlateVisibility::Hidden);
 }
 
