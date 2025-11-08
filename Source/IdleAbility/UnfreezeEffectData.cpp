@@ -25,7 +25,6 @@ bool UUnfreezeEffectData::ApplyEffect(const FAbilityEffectContext& Context) cons
         return false;
     }
 
-    // Debug: afficher la liste des effets restants
     if (TArray<FAbilityEffectSpec>* Specs = Manager->ActiveEffects.Find(Target))
     {
 
@@ -33,7 +32,6 @@ bool UUnfreezeEffectData::ApplyEffect(const FAbilityEffectContext& Context) cons
         {
             if (!Spec.EffectData) continue;
 
-            // On ignore le Freeze qui est en train d’expirer
             if (Spec.EffectData->IsA<UFreezeEffectData>() && Spec.TimeRemaining > 0.f)
             {
                 return true;

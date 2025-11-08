@@ -25,7 +25,7 @@ void ACustomCharacter::Tick(float DeltaTime)
     }
 
     if (isFrozen)
-        return; // Stop movement / behavior
+        return; // Stop movement
 }
 
 void ACustomCharacter::RegenHealthOverTime(float DeltaTime)

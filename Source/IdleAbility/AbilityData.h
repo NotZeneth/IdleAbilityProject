@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include "AbilityEffectData.h"
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "AbilityEffectData.h"
 #include "CustomCharacter.h"
 #include "AbilityData.generated.h"
 
-
+//On event on utilise pas fnalement, on aurait pu tho
 UENUM(BlueprintType)
 enum class EAbilityTriggerType : uint8
 {
@@ -17,6 +17,7 @@ enum class EAbilityTriggerType : uint8
     OnEvent  UMETA(DisplayName = "On Event")
 };
 
+// self on l'utilise pas et on l'a jamais test du coup
 UENUM(BlueprintType)
 enum class EAbilityTargeting : uint8
 {
@@ -26,12 +27,15 @@ enum class EAbilityTargeting : uint8
     RandomEnemies       UMETA(DisplayName = "Random Enemies")
 };
 
+// Tout ce que contient une ability
+
 UCLASS(BlueprintType)
 class IDLEABILITY_API UAbilityData : public UDataAsset
 {
     GENERATED_BODY()
 
 public:
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     FText AbilityName;
 
@@ -44,42 +48,46 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     float Cooldown = 1.f;
 
+    // 0 = instant, classique
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     float Duration = 0.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     EAbilityTriggerType TriggerType = EAbilityTriggerType::Manual;
 
+    // Au final on a juste mis tout a pure, vu qu'on utilise pas d'armure par flmm de balance mais c'est coded
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
     EDamageType AbilityType = EDamageType::Pure;
 
-    // Deux “tracks” génériques pour upgrades (dégâts, %slow, durée, etc.)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float PrimaryValue = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-    float SecondaryValue = 0.f;
-
-    // ---- Targeting ----
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting")
     EAbilityTargeting Targeting = EAbilityTargeting::SingleNearestEnemy;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting!=EAbilityTargeting::Self"))
+    // Range a laquelle on considere l'enemie comme ciblable par l'ability
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting",
+        meta = (EditCondition = "Targeting!=EAbilityTargeting::Self"))
     float Range = 2000.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (EditCondition = "Targeting==EAbilityTargeting::RandomEnemies", ClampMin = "1"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Targeting",
+        meta = (EditCondition = "Targeting==EAbilityTargeting::RandomEnemies", ClampMin = "1"))
     int32 TargetCount = 1;
 
+
+
+    // Liste des effets
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
     TArray<UAbilityEffectData*> Effects;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop") bool bUnlocked = true;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop") int32 GemCostToUnlock = 1;
-
+    //liste des upgrades
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrade")
     FAbilityUpgradeSet BaseUpgrades;
 
+    // Si l'ability commence unlocked ou non
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop")
+    bool bUnlocked = true;
 
-
-
+    // Cout pour unlock
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shop")
+    int32 GemCostToUnlock = 1;
 };
+    

@@ -12,9 +12,8 @@ class IDLEABILITY_API UUnFrenzyEffectData : public UAbilityEffectData
     GENERATED_BODY()
 
 public:
-    // doit être exactement l’inverse du FrenzyScalar
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Frenzy")
-    float RevertScalar = 5.0f;
+    float RevertScalar = 5.0f; // reverse un 0.2
 
     virtual bool ApplyEffect(const FAbilityEffectContext& Context) const override;
 };

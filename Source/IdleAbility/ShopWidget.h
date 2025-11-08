@@ -15,6 +15,10 @@ class UBorder;
 class UAbilityManagerComponent;
 class UAbilityData;
 
+// Classe abominable : pour les boutons d'ability j'ai fait tout gentillement une horizontal box et un widget bouton d'ability
+// La je voulais essayer de faire ca en full c++ : bah heu wai ca marche mais a quel prix ?
+// Mais j'ai appris des trucs et ca c'est précieux :)
+
 UCLASS()
 class IDLEABILITY_API UShopUpgradeButton : public UButton
 {
@@ -44,7 +48,7 @@ public:
     void HandleClicked();
 };
 
-// Petit bouton dédié pour l'unlock d'ability (même pattern que UShopUpgradeButton)
+// unlock 
 UCLASS()
 class IDLEABILITY_API UUnlockAbilityButton : public UButton
 {
@@ -68,12 +72,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void PopulateShop();
 
-    // Sous ta fonction PopulateShop()
     UFUNCTION(BlueprintCallable)
     void PopulatePlayerUpgrades();
 
-
-    // Appelé par le bouton custom
     void OnUpgradeButtonClicked(UShopUpgradeButton* Btn);
 
     UFUNCTION()

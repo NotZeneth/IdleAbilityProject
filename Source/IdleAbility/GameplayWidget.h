@@ -26,7 +26,6 @@ protected:
     APlayerCharacter* PlayerRef = nullptr;
     AWaveGameMode* GameModeRef = nullptr;
 
-    // --- Widgets liés ---
     UPROPERTY(meta = (BindWidget)) UProgressBar* HealthBar;
     UPROPERTY(meta = (BindWidget)) UTextBlock* TextHealth;
     UPROPERTY(meta = (BindWidget)) UTextBlock* TextGold;
@@ -39,9 +38,6 @@ protected:
     UPROPERTY(meta = (BindWidget)) UButton* ButtonShop;
 
 
-
-
-    // --- UI update API ---
 public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateHealth(float CurrentHP, float MaxHP);
@@ -64,11 +60,8 @@ public:
     UPROPERTY()
     UShopWidget* ShopWidgetRef = nullptr;
 
+protected: //oui deuxieme champs mais j'aime bien c'est propre
 
-
-
-protected:
-    // --- Boutons ---
     UFUNCTION() void OnAddGold();
     UFUNCTION() void OnAddGem();
     UFUNCTION() void OnJumpWave();

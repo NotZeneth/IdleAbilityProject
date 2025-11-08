@@ -8,8 +8,10 @@
 
 class UButton;
 class UTextBlock;
-class UAbilityManagerComponent;
 class UImage;
+class UAbilityManagerComponent;
+
+// Widget pour chaque bouton d'ability, y a un bouton duh et un bouton set auto en gros
 
 UCLASS()
 class IDLEABILITY_API UAbilityButtonWidget : public UUserWidget
@@ -17,6 +19,7 @@ class IDLEABILITY_API UAbilityButtonWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
+    // l'indexe dans le manager, car derriere on veut pouvoir recup des infos donc pratique
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
     int32 AbilityIndex = 0;
 
@@ -43,8 +46,6 @@ private:
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     UImage* AbilityIcon;
 
-    // Nouveau petit bouton pour activer/désactiver l'autocast
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     UButton* Button_AutoCast;
-
 };

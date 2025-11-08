@@ -10,14 +10,14 @@ bool UUnWeakenEffectData::ApplyEffect(const FAbilityEffectContext& Context) cons
     if (!Context.Target)
         return false;
 
-    // On retire le malus de dégâts reçus
+    // On retire le malus de degat
     Context.Target->DamageTakenBonus -= DebuffMagnitude;
     if (Context.Target->DamageTakenBonus < 0.f)
     {
         Context.Target->DamageTakenBonus = 0.f;
     }
 
-    // Si plus d'affaiblissement actif, cacher le visuel
+    // Si plus d'affaiblissement actif, hide visual
     if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Context.Target))
     {
         if (Enemy->WeakenedPlane && Context.Target->DamageTakenBonus <= 0.f)

@@ -16,17 +16,15 @@ bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 
     UAbilityManagerComponent* Manager = Context.Source->FindComponentByClass<UAbilityManagerComponent>();
 
-    // --- Lecture des upgrades Bounce ---
-    float Chance = BounceChance;       // valeur locale par defaut
-    int32 Count = BounceCount;         // valeur locale par defaut
+    float Chance = BounceChance;
+    int32 Count = BounceCount;
 
     if (Manager && Context.Ability)
     {
-        // On récupère les valeurs même si elles valent 0
         const float UpChance = Manager->GetUpgradeValue(Context.Ability, TEXT("BounceChance"));
         const float UpAmount = Manager->GetUpgradeValue(Context.Ability, TEXT("BounceAmount"));
 
-        // Si le DataAsset a bien un track pour cette stat, on remplace systématiquement
+        // Remplace si le data asset a une upgrade de bounce
         const FAbilityUpgradeSet& Up = Context.Ability->BaseUpgrades;
         if (Up.BounceChance.EffectValues.Num() > 0)
             Chance = FMath::Clamp(UpChance, 0.f, 1.f);
@@ -34,8 +32,6 @@ bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
             Count = FMath::Max(0, static_cast<int32>(FMath::RoundToInt(UpAmount)));
     }
 
-
-    // --- Chance de rebond ---
     const float Roll = FMath::FRand();
     UE_LOG(LogTemp, Warning, TEXT("[Bounce] Roll=%.2f | Chance=%.2f"), Roll, Chance);
 
@@ -46,7 +42,6 @@ bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         return true;
     }
 
-    // --- Vérifie le nombre de rebonds restants ---
     if (Projectile->RemainingBounces <= 0 || Count <= 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("[Bounce] Aucun rebond restant -> projectile détruit"));
@@ -54,11 +49,8 @@ bool UBounceEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         return true;
     }
 
-    // Décrémente le compteur de rebonds en fonction du paramètre BounceCount
     Projectile->RemainingBounces = FMath::Min(Projectile->RemainingBounces, Count) - 1;
 
-    // Reste du code : recherche de cibles et redirection du projectile
-    // ---------------------------------------------------------------
     TArray<ACustomCharacter*> Candidates;
     const float Range = (Context.Ability->Range > 0) ? Context.Ability->Range : BounceRangeOverride;
 

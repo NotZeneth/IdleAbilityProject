@@ -12,7 +12,7 @@ class IDLEABILITY_API UDamageEffectData : public UAbilityEffectData
     GENERATED_BODY()
 
 public:
-    // Multiplie l’attaque du joueur
+    // % de l'attack du joueur
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
     float DamageMultiplier = 1.0f;
 

@@ -14,7 +14,6 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     if (!Manager)
         return false;
 
-    // --- Internal Cooldown (ICD) ---
     float& LastTime = Manager->LastFrenzyTimes.FindOrAdd(Context.Ability);
     const float Now = Context.Source->GetWorld()->TimeSeconds;
 
@@ -23,10 +22,8 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         return false;
     }
 
-    // --- Déterminer la chance de proc ---
     float Chance = TriggerChance;
 
-    // si un track d’upgrade "FrenzyChance" existe, on prend la valeur correspondante
     const FAbilityUpgradeSet& Up = Context.Ability->BaseUpgrades;
     if (Up.FrenzyChance.EffectValues.Num() > 0)
     {
@@ -34,19 +31,17 @@ bool UFrenzyEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         Chance = FMath::Clamp(UpChance, 0.f, 1.f);
     }
 
-    // --- RNG ---
     if (FMath::FRand() > Chance)
     {
         return false;
     }
 
-    // --- Appliquer le frenzy ---
     FAbilitySpec* Spec = Manager->EquippedAbilities.FindByPredicate(
         [&](const FAbilitySpec& S) { return S.Ability == Context.Ability; });
 
     if (Spec)
     {
-        Spec->CooldownScalar *= FrenzyScalar; // réduction du cooldown (temporaire)
+        Spec->CooldownScalar *= FrenzyScalar;
         LastTime = Now;
 
         UE_LOG(LogTemp, Warning, TEXT("[Frenzy] Proc sur %s : chance=%.2f, scalar=%.2f"),

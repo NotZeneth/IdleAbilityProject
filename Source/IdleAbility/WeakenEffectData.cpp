@@ -13,7 +13,7 @@ bool UWeakenEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     // Augmente les dégâts subis
     Context.Target->DamageTakenBonus += DebuffMagnitude;
 
-    // Affiche le plane sur les ennemis
+    // Affiche le plane debuff
     if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Context.Target))
     {
         if (Enemy->WeakenedPlane)

@@ -127,13 +127,39 @@ void AWaveGameMode::JumpToWave(int NewWave)
     for (AEnemyCharacter* Enemy : EnemiesSnapshot)
     {
         if (!Enemy || !Enemy->IsAlive())
-            continue;
+                    continue;
 
+        // Oui non j'aurai juste du créer une fonction pour tuer sans declancher le loot, ou juste un param mais manque de temps
+        Enemy->GoldOnDeath = 0;
+        Enemy->GemOnDeath = 0;
         Enemy->TakeCustomDamage(999999.f, EDamageType::Pure, PlayerRef);
     }
 
     UE_LOG(LogTemp, Warning, TEXT("[Wave] JumpToWave terminé (ennemis nettoyés)"));
 
     EnemyList.Empty();
+}
+
+void AWaveGameMode::HandlePlayerDeath()
+{
+    // Juste au cas où
+    if (CurrentWave <= 1)
+    {
+        JumpToWave(1);
+        return;
+    }
+
+    int32 TargetWave = CurrentWave;
+
+    // si on est sur une vague multiple de 5 (5, 10, 15, 20...) -> revenir à la précédente
+    if (CurrentWave % 5 == 0)
+    {
+        TargetWave = FMath::Max(1, CurrentWave - 1);
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[Wave] Player died on wave %d -> restarting wave %d"), CurrentWave, TargetWave);
+    PlayerRef->CurrentHP = PlayerRef->MaxHP;
+    PlayerRef->Heal(1);
+    JumpToWave(TargetWave);
 }
 

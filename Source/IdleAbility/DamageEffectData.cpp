@@ -11,7 +11,6 @@ bool UDamageEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     if (!Context.Source || !Context.Target || !Context.Target->IsAlive())
         return true;
 
-    // valeur par défaut depuis l’asset
     float Mult = DamageMultiplier;
 
     // override par l’upgrade si dispo

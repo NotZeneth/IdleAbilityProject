@@ -13,7 +13,7 @@ class IDLEABILITY_API UWeakenEffectData : public UAbilityEffectData
 
 public:
 
-    // Valeur du debuff : 0.2 = +20% dégâts subis
+    // debuff : 0.2 = +20% dégâts subis
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weaken")
     float DebuffMagnitude = 0.2f;
 

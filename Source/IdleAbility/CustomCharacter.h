@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "CustomCharacter.generated.h"
 
+// Bon au final on fait qu'use pure mais whatever
 UENUM(BlueprintType)
 enum class EDamageType : uint8
 {
@@ -14,6 +15,7 @@ enum class EDamageType : uint8
     Pure
 };
 
+// Class commune au joueur et a l'ennemi
 UCLASS()
 class IDLEABILITY_API ACustomCharacter : public ACharacter
 {
@@ -29,67 +31,55 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    // --- Stats de base ---
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    // joueur = 0, enemy = 1
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     int32 TeamId = 0;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float MaxHP = 100.f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Core")
     float CurrentHP = 100.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float HpRegenPercent = 0.f; // % par seconde
+    // La regen c'est un % de la vie
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
+    float HpRegenPercent = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Core")
     float Attack = 10.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    // On en utilise pas atm mais le code est la
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Defense")
     float PhysicalDmgReduction = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Defense")
     float MagicalDmgReduction = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Defense")
     float IgnoreDmgReduction = 0.f;
-
-    // --- Effets secondaires ---
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MultishotChance = 0.1f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 MultishotAmount = 2;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float BounceChance = 0.1f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 MaxBounces = 3;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float FrenzyChance = 0.05f;
-
-    // --- Combat ---
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void RegenHealthOverTime(float DeltaTime);
-
     UFUNCTION(BlueprintCallable, Category = "Combat")
     virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source);
 
     UFUNCTION(BlueprintCallable, Category = "Combat")
-    void Heal(float HealAmount);
+    virtual void Heal(float HealAmount);
 
-    UFUNCTION(BlueprintCallable, Category = "Stats")
+    UFUNCTION(BlueprintCallable, Category = "Combat")
     bool IsAlive();
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
     bool isFrozen = false;
 
+    // bonus de dégâts reçus (0.5 = +50% dégâts)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
-    float DamageTakenBonus = 0.f; // 0 = normal, 0.5 = +50% dmg
+    float DamageTakenBonus = 0.f;
+
 
     UPROPERTY()
     class AWaveGameMode* GameModeRef = nullptr;
-
 };

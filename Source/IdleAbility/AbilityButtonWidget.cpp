@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilityButtonWidget.h"
 #include "AbilityManagerComponent.h"
 #include "Components/Button.h"
@@ -8,15 +7,18 @@
 #include "Components/Image.h"
 #include "PlayerCharacter.h"
 
-
 void UAbilityButtonWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
+    // Si pas encore set, ca devrait mais autant etre safe
+
     if (!AbilityManager)
     {
         if (APlayerCharacter* Player = Cast<APlayerCharacter>(GetOwningPlayerPawn()))
+        {
             AbilityManager = Player->FindComponentByClass<UAbilityManagerComponent>();
+        }
     }
 
     if (Button_Ability)
@@ -29,7 +31,7 @@ void UAbilityButtonWidget::NativeConstruct()
         Button_AutoCast->OnClicked.AddDynamic(this, &UAbilityButtonWidget::OnToggleAutoCast);
     }
 
-    // l'icone
+    // Icone is valide
     if (AbilityManager && AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex))
     {
         const FAbilitySpec& Spec = AbilityManager->EquippedAbilities[AbilityIndex];
@@ -40,15 +42,6 @@ void UAbilityButtonWidget::NativeConstruct()
     }
 }
 
-
-void UAbilityButtonWidget::OnLeftClicked()
-{
-    if (!AbilityManager) return;
-    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex)) return;  // oui bon c'est overkill mais bon j'avais envie de test la fonction
-
-    AbilityManager->TryActivateAbility(AbilityIndex);
-}
-
 void UAbilityButtonWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
@@ -57,26 +50,45 @@ void UAbilityButtonWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
         return;
 
     const FAbilitySpec& Spec = AbilityManager->EquippedAbilities[AbilityIndex];
-    if (!Spec.Ability) return;
+    if (!Spec.Ability)
+        return;
 
-    float Remaining = FMath::Max(0.f, Spec.CooldownEndTime - GetWorld()->TimeSeconds);
+    const float Remaining = FMath::Max(0.f, Spec.CooldownEndTime - GetWorld()->TimeSeconds);
+
     if (Text_Cooldown)
     {
         if (Remaining > 0.f)
+        {
             Text_Cooldown->SetText(FText::FromString(FString::Printf(TEXT("%.1f"), Remaining)));
+        }
         else
+        {
             Text_Cooldown->SetText(FText::GetEmpty());
+        }
     }
+}
+
+void UAbilityButtonWidget::OnLeftClicked()
+{
+    if (!AbilityManager)
+        return;
+
+    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex))
+        return; // vraiment overkill mais au moins j'suis safe
+
+    AbilityManager->TryActivateAbility(AbilityIndex);
 }
 
 void UAbilityButtonWidget::OnToggleAutoCast()
 {
-    if (!AbilityManager) return;
-    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex)) return;
+    if (!AbilityManager)
+        return;
+
+    if (!AbilityManager->EquippedAbilities.IsValidIndex(AbilityIndex))
+        return;
 
     FAbilitySpec& Spec = AbilityManager->EquippedAbilities[AbilityIndex];
     Spec.isAutoCast = !Spec.isAutoCast;
 
-    UE_LOG(LogTemp, Warning, TEXT("[UI] Ability %d autocast = %s"),
-        AbilityIndex, Spec.isAutoCast ? TEXT("ON") : TEXT("OFF"));
+    UE_LOG(LogTemp, Log, TEXT("[UI ability btn] Ability %d autocast = %s"), AbilityIndex, Spec.isAutoCast ? TEXT("ON") : TEXT("OFF"));
 }

@@ -12,14 +12,13 @@ class IDLEABILITY_API UBounceEffectData : public UAbilityEffectData
     GENERATED_BODY()
 
 public:
-    // Multiplie la stat BounceChance du joueur
+    // QUand on utilise pas d'upgrade ca
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bounce")
     float BounceChance = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bounce")
     int BounceCount = 1;
 
-    // Si Ability->Range == 0, fallback sur cette valeur
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bounce")
     float BounceRangeOverride = 1000.f;
 

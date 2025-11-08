@@ -10,11 +10,8 @@ class UHorizontalBox;
 class UAbilityButtonWidget;
 class UAbilityManagerComponent;
 
-/**
- * Widget C++ représentant la barre d'abilities du joueur.
- * Il crée dynamiquement un bouton par ability équipée.
- * Chaque bouton gère ses clics gauche/droit et affiche le cooldown.
- */
+// Un widget juste pour la barre d'action du joueur, plutot que de faire un qui fait absolument tout je split
+
 UCLASS()
 class IDLEABILITY_API UAbilityBarWidget : public UUserWidget
 {
@@ -23,20 +20,19 @@ class IDLEABILITY_API UAbilityBarWidget : public UUserWidget
 public:
     virtual void NativeConstruct() override;
 
+    // On refait les boutons, ca gere le cas ou les boutons sont modified, added etc
     UFUNCTION(BlueprintCallable, Category = "Abilities")
     void RefreshButtons();
 
 protected:
-    /** Container horizontal des boutons */
+
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     UHorizontalBox* ButtonContainer;
 
-    /** Classe C++ du widget bouton individuel */
+    // La on a fait un widget specifique juste pour les boutons pour factoriser (approche normale mais ailleurs on a fait dif pour varier)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Abilities")
     TSubclassOf<UAbilityButtonWidget> AbilityButtonClass;
 
-
-    /** Référence vers le AbilityManager du joueur */
     UPROPERTY()
-    UAbilityManagerComponent* AbilityManager;
+    UAbilityManagerComponent* AbilityManager = nullptr;
 };

@@ -8,7 +8,7 @@
 
 class UAbilityManagerComponent;
 class UAbilityBarWidget;
-class UGameplayWidget; // oui je sais les def unique je peux ecrire class dans la déclaration, mais ca m'aide a pas oublier d'inclure dans le cpp
+class UGameplayWidget;
 
 UCLASS()
 class IDLEABILITY_API APlayerCharacter : public ACustomCharacter
@@ -22,27 +22,38 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    // Composant qui gère toutes les abilities du joueur
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
-    UAbilityManagerComponent* AbilityManager;
+    UAbilityManagerComponent* AbilityManager = nullptr;
+
+     // --------------- UI
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UAbilityBarWidget> AbilityBarClass;
 
     UPROPERTY()
-    UAbilityBarWidget* AbilityWidgetRef;
+    UAbilityBarWidget* AbilityWidgetRef = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UGameplayWidget> GameplayWidgetClass;
 
     UPROPERTY()
-    UGameplayWidget* GameplayWidgetRef;
+    UGameplayWidget* GameplayWidgetRef = nullptr;
 
+    // --------------- Stats
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats") 
+    float AttackMultiplier = 1.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float AttackMultiplier = 10.f;
+    float HealthMultiplier = 1.f;
 
-    float GetPlayerAttack();
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    float GetPlayerAttack(); // bon en vrai y a que le damage effect qui peut mettre des degats donc overkill mais ez
+
+    virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;
+
+    virtual void Heal(float HealAmount) override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
     int CurrentGold = 0;
@@ -61,8 +72,4 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Progression")
     void AddGem(float amount);
-
-    virtual void TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source) override;
-
-
 };

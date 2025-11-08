@@ -7,7 +7,6 @@
 
 bool URepeatedEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
 {
-    // Sécurité basique
     if (!Context.Source || !EffectToRepeat)
     {
         return true;

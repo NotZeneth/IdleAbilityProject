@@ -17,7 +17,6 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 
-// ---------- UShopUpgradeButton ----------
 void UShopUpgradeButton::HandleClicked()
 {
     if (OwnerWidget)
@@ -72,7 +71,6 @@ void UShopWidget::PopulateShop()
 
     ShopListBox->ClearChildren();
 
-    // Section Player Upgrades (ta fonction existante)
     PopulatePlayerUpgrades();
 
     for (const FAbilitySpec& Spec : AbilityManager->EquippedAbilities)
@@ -80,7 +78,6 @@ void UShopWidget::PopulateShop()
         if (!Spec.Ability) continue;
         UAbilityData* Ability = Spec.Ability;
 
-        // --- Carte de l’ability ---
         UBorder* AbilityCard = NewObject<UBorder>(this);
         AbilityCard->SetPadding(FMargin(8));
         AbilityCard->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.35f));
@@ -89,7 +86,6 @@ void UShopWidget::PopulateShop()
         UVerticalBox* EntryBox = NewObject<UVerticalBox>(this);
         AbilityCard->SetContent(EntryBox);
 
-        // --- Icône + Nom ---
         UHorizontalBox* HeaderBox = NewObject<UHorizontalBox>(this);
         EntryBox->AddChildToVerticalBox(HeaderBox);
 
@@ -112,7 +108,6 @@ void UShopWidget::PopulateShop()
         Title->SetColorAndOpacity(FSlateColor(FLinearColor::White));
         HeaderBox->AddChildToHorizontalBox(Title);
 
-        // --- Description ---
         if (!Ability->Description.IsEmpty())
         {
             UTextBlock* Desc = NewObject<UTextBlock>(this);
@@ -122,7 +117,7 @@ void UShopWidget::PopulateShop()
             EntryBox->AddChildToVerticalBox(Desc);
         }
 
-        // === (NOUVEAU) Ability lockée ? Affiche un bouton "Unlock" puis passe à la suivante ===
+      
         if (!Spec.bUnlocked)
         {
             const int32 Cost = Ability->GemCostToUnlock;
@@ -138,7 +133,7 @@ void UShopWidget::PopulateShop()
             UnlockText->SetText(FText::FromString(FString::Printf(TEXT("Unlock for %d Gems"), Cost)));
             UnlockBtn->SetContent(UnlockText);
 
-            // Feedback si pas assez de gemmes (grisé)
+            
             if (AbilityManager->PlayerRef)
             {
                 const bool bCanAfford = AbilityManager->PlayerRef->CurrentGem >= Cost;
@@ -147,17 +142,15 @@ void UShopWidget::PopulateShop()
 
             EntryBox->AddChildToVerticalBox(UnlockBtn);
 
-            // Espacement sous la carte
             UTextBlock* Spacer = NewObject<UTextBlock>(this);
             Spacer->SetText(FText::GetEmpty());
             Spacer->SetMargin(FMargin(0, 0, 0, 10));
             ShopListBox->AddChild(Spacer);
 
-            // On ne montre PAS les upgrades tant que non débloquée
             continue;
         }
 
-        // --- Label Upgrades (ability déjà débloquée) ---
+       
         UTextBlock* Label = NewObject<UTextBlock>(this);
         Label->SetText(FText::FromString(TEXT("Available Upgrades:")));
         EntryBox->AddChildToVerticalBox(Label);
@@ -165,7 +158,6 @@ void UShopWidget::PopulateShop()
         const FAbilityUpgradeSet& Upgrades = Ability->BaseUpgrades;
         int32 NumUpgrades = 0;
 
-        // --- Créateur de bouton (inchangé) ---
         auto MakeUpgradeButton = [&](UAbilityData* InAbility, const FString& Name, const FUpgradeStat& Stat)
             {
                 if (Stat.UpgradeCosts.Num() == 0) return;
@@ -176,7 +168,6 @@ void UShopWidget::PopulateShop()
                 Button->UpgradeName = Name;
                 Button->OwnerWidget = this;
 
-                // Niveau actuel depuis le manager
                 int32 CurrentLevel = 0;
                 if (const FUpgradeLevels* Levels = AbilityManager->UpgradeLevelsByAbility.Find(InAbility))
                 {
@@ -229,7 +220,6 @@ void UShopWidget::PopulateShop()
                 EntryBox->AddChildToVerticalBox(Button);
             };
 
-        // --- Crée les boutons d'upgrade (ability débloquée) ---
         MakeUpgradeButton(Ability, TEXT("Damage"), Upgrades.Damage);
         MakeUpgradeButton(Ability, TEXT("Cooldown"), Upgrades.Cooldown);
         MakeUpgradeButton(Ability, TEXT("MultishotChance"), Upgrades.MultishotChance);
@@ -246,7 +236,6 @@ void UShopWidget::PopulateShop()
             EntryBox->AddChildToVerticalBox(NoUpgrade);
         }
 
-        // --- Espacement ---
         UTextBlock* Spacer = NewObject<UTextBlock>(this);
         Spacer->SetText(FText::GetEmpty());
         Spacer->SetMargin(FMargin(0, 0, 0, 10));
@@ -260,16 +249,14 @@ void UShopWidget::PopulatePlayerUpgrades()
     if (!AbilityManager || !ShopListBox)
         return;
 
-    // --- Carte visuelle globale ---
     UBorder* PlayerCard = NewObject<UBorder>(this);
     PlayerCard->SetPadding(FMargin(8));
-    PlayerCard->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.35f)); // fond semi-transparent
+    PlayerCard->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.35f));
     ShopListBox->AddChild(PlayerCard);
 
     UVerticalBox* EntryBox = NewObject<UVerticalBox>(this);
     PlayerCard->SetContent(EntryBox);
 
-    // --- Titre ---
     UTextBlock* Header = NewObject<UTextBlock>(this);
     Header->SetText(FText::FromString(TEXT("PLAYER UPGRADES")));
     Header->SetJustification(ETextJustify::Center);
@@ -281,7 +268,6 @@ void UShopWidget::PopulatePlayerUpgrades()
     }
     EntryBox->AddChildToVerticalBox(Header);
 
-    // --- petit espace sous le titre ---
     UTextBlock* SpacerTop = NewObject<UTextBlock>(this);
     SpacerTop->SetText(FText::GetEmpty());
     SpacerTop->SetMargin(FMargin(0, 0, 0, 5));
@@ -306,7 +292,6 @@ void UShopWidget::PopulatePlayerUpgrades()
             Button->OnClicked.AddDynamic(Button, &UPlayerUpgradeButton::HandleClicked);
             Button->SetBackgroundColor(FLinearColor(0.18f, 0.18f, 0.18f, 1.f));
 
-            // ajoute un petit espace horizontal à l’intérieur du texte
             UHorizontalBox* InnerBox = NewObject<UHorizontalBox>(this);
             UHorizontalBoxSlot* TxtSlot = nullptr;
 
@@ -332,20 +317,17 @@ void UShopWidget::PopulatePlayerUpgrades()
             Button->SetContent(BtnText);
             EntryBox->AddChildToVerticalBox(Button);
 
-            // Espacement léger sous chaque bouton
             UTextBlock* SmallSpacer = NewObject<UTextBlock>(this);
             SmallSpacer->SetText(FText::GetEmpty());
             SmallSpacer->SetMargin(FMargin(0, 0, 0, 4));
             EntryBox->AddChildToVerticalBox(SmallSpacer);
         };
 
-    // --- 4 boutons ---
     MakeButton("AttackFlat", "Attack");
     MakeButton("MaxHPFlat", "Max HP");
     MakeButton("AttackPercent", "Attack %");
     MakeButton("HPPercent", "HP %");
 
-    // --- espacement avant les abilities ---
     UTextBlock* SpacerBottom = NewObject<UTextBlock>(this);
     SpacerBottom->SetText(FText::GetEmpty());
     SpacerBottom->SetMargin(FMargin(0, 0, 0, 10));
@@ -421,14 +403,13 @@ void UShopWidget::OnUnlockAbilityClicked(UAbilityData* Ability)
     if (Player->CurrentGem >= Cost)
     {
         Player->AddGem(-Cost);
-        FoundSpec->bUnlocked = true; //  on modifie le Spec
+        FoundSpec->bUnlocked = true;
 
         UE_LOG(LogTemp, Log, TEXT("[SHOP] Unlocked %s for %d gems"),
             *Ability->AbilityName.ToString(), Cost);
 
-        PopulateShop(); // refresh UI shop
+        PopulateShop();
 
-        // refresh de la barre (déjà ajouté)
         if (Player->AbilityWidgetRef)
         {
             Player->AbilityWidgetRef->RefreshButtons();

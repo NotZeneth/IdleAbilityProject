@@ -13,7 +13,6 @@ class IDLEABILITY_API URetriggerEffectData : public URepeatedEffectData
 
 public:
 
-    // Chance à chaque Tick (0 à 1)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Retrigger",
         meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float RetriggerChance = 1.0f;

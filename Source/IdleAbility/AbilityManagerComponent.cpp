@@ -1,14 +1,14 @@
-
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilityManagerComponent.h"
 #include "CustomCharacter.h"
 #include "EnemyCharacter.h"
+#include "PlayerCharacter.h"
+#include "WaveGameMode.h"
+#include "GameplayWidget.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Algo/RandomShuffle.h"
-#include "WaveGameMode.h"
-#include "GameplayWidget.h"
-#include "PlayerCharacter.h"
 
 UAbilityManagerComponent::UAbilityManagerComponent()
 {
@@ -19,35 +19,30 @@ void UAbilityManagerComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (UWorld* World = GetWorld()) // Bon en vrai je devrais avoir le player qui le set et config mais flemme
+    // en vrai je devrais avoir le player qui setup ca, mais flemme donc on le chope via le World
+    if (UWorld* World = GetWorld())
     {
         GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
     }
 
+    // init des upgrades pour chaque ability equiped
     for (FAbilitySpec& Spec : EquippedAbilities)
     {
         if (Spec.Ability)
         {
-            // initialise les niveaux d'upgrade
             UpgradeLevelsByAbility.Add(Spec.Ability, FUpgradeLevels());
-
-            // synchronise l'état "débloqué par défaut" depuis le DataAsset
-            Spec.bUnlocked = Spec.Ability->bUnlocked;
+            Spec.bUnlocked = Spec.Ability->bUnlocked; // synchro avec la valeur du DA
         }
     }
-
-
-
-
 }
 
 void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    // Gestion des abilities auto
+    // abilities auto s'il y a des enemies only
     if (!GameModeRef || GameModeRef->EnemyList.Num() == 0)
-        return; // Les ability se lancent pas s'il y a pas d'ennemi 
+        return;
 
     for (int32 i = 0; i < EquippedAbilities.Num(); i++)
     {
@@ -58,12 +53,9 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
         }
     }
 
-    // ============================================================
-    // Gestion des effets persistants (DOT, buffs, debuffs…)
-    // ============================================================
-
+    // effets persistants
     TArray<ACustomCharacter*> Keys;
-    ActiveEffects.GetKeys(Keys);   // On fige la liste avant d'itérer
+    ActiveEffects.GetKeys(Keys);
     TArray<ACustomCharacter*> TargetsToRemove;
 
     for (ACustomCharacter* Target : Keys)
@@ -87,7 +79,7 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
                 Spec.TimeRemaining -= DeltaTime;
                 Spec.TimeSinceLastTick += DeltaTime;
 
-                // Tick périodique
+                // tick périodique
                 if (TickEvery > 0.f)
                 {
                     while (Spec.TimeSinceLastTick >= TickEvery && Spec.TimeRemaining > 0.f)
@@ -97,15 +89,15 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
                     }
                 }
 
-                // Expiration
+                // expiration
                 if (Spec.TimeRemaining <= 0.f)
                 {
-                    // Déclenche les sous-effets OnExpire
+                    // sous effets OnExpire
                     for (const UAbilityEffectData* Sub : Data->SubEffects)
                     {
                         if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
                         {
-                            UE_LOG(LogTemp, Warning, TEXT("[Expire] Déclenche sous-effet %s sur %s"),
+                            UE_LOG(LogTemp, Warning, TEXT("[Expire] Trigger sub-effect %s on %s"),
                                 *Sub->GetClass()->GetName(),
                                 Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
 
@@ -113,31 +105,29 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
                         }
                     }
 
-                    UE_LOG(LogTemp, Log, TEXT("[Manager] Expiration de %s sur %s"),
+                    UE_LOG(LogTemp, Log, TEXT("[Manager] Expire %s on %s"),
                         *Data->GetClass()->GetName(),
                         Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
 
-                    return true; // supprimer cet effet
+                    return true; // on supprime cet effet
                 }
 
-                return false; // garder
+                return false; // on garde
             });
 
         if (Effects.Num() == 0)
         {
-            TargetsToRemove.Add(Target); // suppression différée
+            TargetsToRemove.Add(Target);
         }
     }
 
-    // Nettoyage des cibles vides après l’itération (safe)
+    // clean up
     for (ACustomCharacter* Tgt : TargetsToRemove)
     {
         ActiveEffects.Remove(Tgt);
     }
 
-    // ============================================================
-    // Suppression différée des entités mortes
-    // ============================================================
+    // clean up, on fait bc de copies de listes et tout pour eviter les erreurs, crash, iterration sur une array qu'on modifie etc
     if (PendingRemovals.Num() > 0)
     {
         for (ACustomCharacter* Dead : PendingRemovals)
@@ -147,9 +137,6 @@ void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
         PendingRemovals.Reset();
     }
 }
-
-
-
 
 bool UAbilityManagerComponent::IsAbilityReady(const FAbilitySpec& Spec) const
 {
@@ -168,32 +155,19 @@ void UAbilityManagerComponent::TryActivateAbility(int32 AbilityIndex)
 
     ExecuteAbility(Spec);
 
-    // ===============================
-    // Cooldown computation (with per-level base CD)
-    // ===============================
-
-    // 1) BaseCd from ability: if upgrade values exist, pick the one matching current level.
-    //    Fallback to the single Ability->Cooldown otherwise.
+    // gestion du cooldown
     float BaseCd = Spec.Ability->Cooldown;
-    {
-        const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(Spec.Ability);
-        const TArray<float>& Values = Spec.Ability->BaseUpgrades.Cooldown.EffectValues;
 
-        if (Levels && Values.Num() > 0)
-        {
-            const int32 Level = Levels->CooldownLevel;
-            BaseCd = Values.IsValidIndex(Level) ? Values[Level] : Values.Last();
-        }
+    const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(Spec.Ability);
+    const TArray<float>& Values = Spec.Ability->BaseUpgrades.Cooldown.EffectValues;
+
+    if (Levels && Values.Num() > 0)
+    {
+        const int32 Level = Levels->CooldownLevel;
+        BaseCd = Values.IsValidIndex(Level) ? Values[Level] : Values.Last();
     }
 
-    // 2) Runtime scalar (Frenzy etc.) keeps working via Spec.CooldownScalar.
-    //    This is modified by Frenzy/UnFrenzy effects elsewhere.
-    const float RuntimeScalar = Spec.CooldownScalar;
-
-    // 4) Final cooldown = Base * RuntimeScalar * CDR multiplier
-    float FinalCooldown = BaseCd * RuntimeScalar;
-
-    // 5) Safety clamp then apply
+    float FinalCooldown = BaseCd * Spec.CooldownScalar;
     FinalCooldown = FMath::Max(0.05f, FinalCooldown);
     Spec.CooldownEndTime = GetWorld()->TimeSeconds + FinalCooldown;
 }
@@ -205,11 +179,11 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
     ACustomCharacter* Caster = Cast<ACustomCharacter>(GetOwner());
     if (!Caster) return;
 
-    // Trouver les cibles
     TArray<ACustomCharacter*> Targets;
     FindTargets(Spec.Ability, Caster, Targets);
 
-    // Self-case
+    // si Self et pas de cible, on se l’applique à soi-même
+    // ! Jamais retested car au final on a aucune ability en self, c'est du legacy pas retouché
     if (Spec.Ability->Targeting == EAbilityTargeting::Self && Targets.Num() == 0)
     {
         Targets.Add(Caster);
@@ -217,12 +191,12 @@ void UAbilityManagerComponent::ExecuteAbility(const FAbilitySpec& Spec)
 
     if (Targets.Num() == 0 && Spec.Ability->Targeting != EAbilityTargeting::Self)
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s a lancé %s mais aucune cible trouvée."),
+        UE_LOG(LogTemp, Warning, TEXT("%s a lance %s mais aucune cible trouvee"),
             *Caster->GetName(), *Spec.Ability->AbilityName.ToString());
         return;
     }
 
-    // Appliquer les effets OnCast
+    // on applique les effets OnCast
     for (UAbilityEffectData* EffectData : Spec.Ability->Effects)
     {
         if (!EffectData || EffectData->TriggerPhase != EEffectTriggerPhase::OnCast)
@@ -245,7 +219,6 @@ void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomC
 {
     if (!Ability || !Caster) return;
 
-    // Collecte brute des ennemis
     TArray<ACustomCharacter*> Candidates;
     if (GameModeRef)
     {
@@ -258,7 +231,7 @@ void UAbilityManagerComponent::FindTargets(const UAbilityData* Ability, ACustomC
 
     if (Ability->Targeting == EAbilityTargeting::RandomEnemies)
     {
-        Algo::RandomShuffle(Candidates); // bon ca c'est de la flmm mais ca existe donc why not hein
+        Algo::RandomShuffle(Candidates);
         const int32 N = FMath::Min(Ability->TargetCount, Candidates.Num());
         for (int32 i = 0; i < N; ++i)
         {
@@ -320,10 +293,9 @@ void UAbilityManagerComponent::OnEnemyKilled(AEnemyCharacter* DeadEnemy)
 {
     if (!DeadEnemy) return;
 
-    UE_LOG(LogTemp, Log, TEXT("[Manager] Cleanup différé des effets persistants sur %s"), *DeadEnemy->GetName());
+    UE_LOG(LogTemp, Log, TEXT("[Manager] Cleanup des effets sur %s"), *DeadEnemy->GetName());
     PendingRemovals.Add(DeadEnemy);
 }
-
 
 void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* EffectData, const FAbilityEffectContext& Context)
 {
@@ -331,15 +303,14 @@ void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* Eff
 
     if (EffectData->Duration <= 0.f)
     {
-        // Instantané (one-shot)
+        // instantané
         EffectData->ApplyEffect(Context);
         return;
     }
 
-    // Persistant (effet qui dure)
+    // persistant
     if (EffectData->bTriggerOnApply)
     {
-        // Appliquer tout de suite si l’effet le veut (DoT, Heal Over Time, etc.)
         if (!EffectData->ApplyEffect(Context))
         {
             return;
@@ -348,40 +319,22 @@ void UAbilityManagerComponent::ApplyEffectToTarget(const UAbilityEffectData* Eff
 
     FAbilityEffectSpec NewSpec(EffectData, Context);
     NewSpec.TimeRemaining = EffectData->Duration;
-
-    // Reset timer après le tick initial
     NewSpec.TimeSinceLastTick = 0.f;
 
     ActiveEffects.FindOrAdd(Context.Target).Add(NewSpec);
 
-    UE_LOG(LogTemp, Log, TEXT("[Manager] Effet persistant %s posé sur %s (Duration=%.2fs, Tick=%.2fs)"),
+    UE_LOG(LogTemp, Log, TEXT("[Manager] Effet persistant %s sur %s (%.2fs, Tick=%.2fs)"),
         *EffectData->GetClass()->GetName(),
         Context.Target ? *Context.Target->GetName() : TEXT("null"),
         NewSpec.TimeRemaining,
         EffectData->TickInterval);
 }
 
-// --- ResetAllEffectsAndCooldowns ---
-// Cette fonction est appelée entre deux vagues d'ennemis (depuis le GameMode).
-// Elle supprime tous les effets persistants (DoT, buffs, Frenzy, etc.)
-// et réinitialise les cooldowns des compétences du joueur.
-//
-// Pourquoi ?
-// Lorsqu'une nouvelle vague commence, on veut éviter que des effets de la
-// vague précédente continuent de tick ou influencent la cadence d'attaque.
-// Sans ce reset, des états orphelins (ex: Frenzy encore actif sur un ennemi mort)
-// pourraient provoquer des comportements incohérents (spam d'attaques, cooldowns bloqués...).
-//
-// En vidant ActiveEffects et en remettant les CooldownEndTime à zéro,
-// on garantit que le joueur repart d'un état "propre" à chaque nouvelle vague.
-
-// Update : on trigger aussi le expire, typiquement que frenzy call unfrenzy
 void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
 {
-    UE_LOG(LogTemp, Warning, TEXT("[Reset] START — ActiveEffects=%d targets"), ActiveEffects.Num());
+    UE_LOG(LogTemp, Warning, TEXT("[Reset] START - %d targets"), ActiveEffects.Num());
 
-    // 1) Forcer tous les OnExpire (ex: UnFrenzy / Unfreeze / UnWeaken…)
-    //    On parcourt une copie des clés pour éviter toute modif pendant l'itération.
+    // on force tous les OnExpire (ex: UnFrenzy / Unfreeze / UnWeaken)
     TArray<ACustomCharacter*> Keys;
     ActiveEffects.GetKeys(Keys);
 
@@ -400,7 +353,7 @@ void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
             {
                 if (Sub && Sub->TriggerPhase == EEffectTriggerPhase::OnExpire)
                 {
-                    UE_LOG(LogTemp, Warning, TEXT("[Reset] Force OnExpire %s -> Target=%s"),
+                    UE_LOG(LogTemp, Warning, TEXT("[Reset] Force OnExpire %s -> %s"),
                         *Sub->GetClass()->GetName(),
                         Spec.Context.Target ? *Spec.Context.Target->GetName() : TEXT("null"));
 
@@ -410,22 +363,20 @@ void UAbilityManagerComponent::ResetAllEffectsAndCooldowns()
         }
     }
 
-    // 2) Purge des effets persistants + files d’attente
     ActiveEffects.Empty();
     PendingRemovals.Empty();
 
-    // 3) Reset des cooldowns ET—par sécurité—du CooldownScalar (anti-Frenzy bloqué)
-    //    (si d'autres effets modifient le scalar un jour, on pourra l'affiner)
+    // reset des cooldowns et scalars
     for (FAbilitySpec& Spec : EquippedAbilities)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Reset] Before: %s  CDScalar=%.3f"),
+        UE_LOG(LogTemp, Warning, TEXT("[Reset] Before: %s CDScalar=%.3f"),
             Spec.Ability ? *Spec.Ability->AbilityName.ToString() : TEXT("null"),
             Spec.CooldownScalar);
 
         Spec.CooldownEndTime = 0.f;
         Spec.CooldownScalar = 1.f;
 
-        UE_LOG(LogTemp, Warning, TEXT("[Reset] After : %s  CDScalar=%.3f"),
+        UE_LOG(LogTemp, Warning, TEXT("[Reset] After : %s CDScalar=%.3f"),
             Spec.Ability ? *Spec.Ability->AbilityName.ToString() : TEXT("null"),
             Spec.CooldownScalar);
     }
@@ -450,18 +401,17 @@ void UAbilityManagerComponent::UpgradeAbility(UAbilityData* Ability, FString Upg
 
     if (!Stat || Stat->EffectValues.Num() == 0) return;
 
-    // Récupère le niveau courant
     FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(Ability);
     if (!Levels) return;
 
     int32* LevelPtr = nullptr;
-    if (UpgradeName == "Damage")           LevelPtr = &Levels->DamageLevel;
-    else if (UpgradeName == "Cooldown")         LevelPtr = &Levels->CooldownLevel;
-    else if (UpgradeName == "MultishotChance")  LevelPtr = &Levels->MultishotChanceLevel;
-    else if (UpgradeName == "MultishotAmount")  LevelPtr = &Levels->MultishotAmountLevel;
-    else if (UpgradeName == "BounceChance")     LevelPtr = &Levels->BounceChanceLevel;
-    else if (UpgradeName == "BounceAmount")     LevelPtr = &Levels->BounceAmountLevel;
-    else if (UpgradeName == "FrenzyChance")     LevelPtr = &Levels->FrenzyChanceLevel;
+    if (UpgradeName == "Damage") LevelPtr = &Levels->DamageLevel;
+    else if (UpgradeName == "Cooldown") LevelPtr = &Levels->CooldownLevel;
+    else if (UpgradeName == "MultishotChance") LevelPtr = &Levels->MultishotChanceLevel;
+    else if (UpgradeName == "MultishotAmount") LevelPtr = &Levels->MultishotAmountLevel;
+    else if (UpgradeName == "BounceChance") LevelPtr = &Levels->BounceChanceLevel;
+    else if (UpgradeName == "BounceAmount") LevelPtr = &Levels->BounceAmountLevel;
+    else if (UpgradeName == "FrenzyChance") LevelPtr = &Levels->FrenzyChanceLevel;
 
     if (!LevelPtr) return;
 
@@ -470,31 +420,24 @@ void UAbilityManagerComponent::UpgradeAbility(UAbilityData* Ability, FString Upg
 
     if (CurrentLevel >= MaxLevel)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Upgrade] %s : %s already max level (%d)"),
+        UE_LOG(LogTemp, Warning, TEXT("[Upgrade] %s : %s max level (%d)"),
             *Ability->AbilityName.ToString(), *UpgradeName, CurrentLevel);
         return;
     }
 
-    // Coût du prochain niveau
     float Cost = Stat->UpgradeCosts.IsValidIndex(CurrentLevel) ? Stat->UpgradeCosts[CurrentLevel] : 0.f;
 
-
     if (PlayerRef->CurrentGold < Cost)
-    {
         return;
-    }
 
-    // Paiement + upgrade
     PlayerRef->AddGold(-Cost);
     *LevelPtr += 1;
-
 }
-
 
 float UAbilityManagerComponent::GetUpgradeValue(const UAbilityData* Ability, const FString& UpgradeName) const
 {
     if (!Ability) return 0.f;
-    const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(const_cast<UAbilityData*>(Ability)); // map clé non-const
+    const FUpgradeLevels* Levels = UpgradeLevelsByAbility.Find(const_cast<UAbilityData*>(Ability));
     if (!Levels) return 0.f;
 
     const FAbilityUpgradeSet& Data = Ability->BaseUpgrades;
@@ -502,14 +445,13 @@ float UAbilityManagerComponent::GetUpgradeValue(const UAbilityData* Ability, con
     int32 Level = 0;
     const TArray<float>* Values = nullptr;
 
-    // c'est long d'aligner ca a la main mais c'est joli
-    if      (UpgradeName == "Damage")           { Level = Levels->DamageLevel;          Values = &Data.Damage.EffectValues; }
-    else if (UpgradeName == "Cooldown")         { Level = Levels->CooldownLevel;        Values = &Data.Cooldown.EffectValues; }
-    else if (UpgradeName == "MultishotChance")  { Level = Levels->MultishotChanceLevel; Values = &Data.MultishotChance.EffectValues; }
-    else if (UpgradeName == "MultishotAmount")  { Level = Levels->MultishotAmountLevel; Values = &Data.MultishotAmount.EffectValues; }
-    else if (UpgradeName == "BounceChance")     { Level = Levels->BounceChanceLevel;    Values = &Data.BounceChance.EffectValues; }
-    else if (UpgradeName == "BounceAmount")     { Level = Levels->BounceAmountLevel;    Values = &Data.BounceAmount.EffectValues; }
-    else if (UpgradeName == "FrenzyChance")     { Level = Levels->FrenzyChanceLevel;    Values = &Data.FrenzyChance.EffectValues; }
+    if (UpgradeName == "Damage") { Level = Levels->DamageLevel;          Values = &Data.Damage.EffectValues; }
+    else if (UpgradeName == "Cooldown") { Level = Levels->CooldownLevel;        Values = &Data.Cooldown.EffectValues; }
+    else if (UpgradeName == "MultishotChance") { Level = Levels->MultishotChanceLevel; Values = &Data.MultishotChance.EffectValues; }
+    else if (UpgradeName == "MultishotAmount") { Level = Levels->MultishotAmountLevel; Values = &Data.MultishotAmount.EffectValues; }
+    else if (UpgradeName == "BounceChance") { Level = Levels->BounceChanceLevel;    Values = &Data.BounceChance.EffectValues; }
+    else if (UpgradeName == "BounceAmount") { Level = Levels->BounceAmountLevel;    Values = &Data.BounceAmount.EffectValues; }
+    else if (UpgradeName == "FrenzyChance") { Level = Levels->FrenzyChanceLevel;    Values = &Data.FrenzyChance.EffectValues; }
 
     if (!Values || Values->Num() == 0) return 0.f;
     if (Values->IsValidIndex(Level)) return (*Values)[Level];
@@ -522,10 +464,10 @@ bool UAbilityManagerComponent::UpgradePlayerStat(const FString& StatName)
 
     FPlayerUpgrade* Target = nullptr;
 
-    if (StatName == "AttackFlat")   Target = &AttackFlat;
-    else if (StatName == "MaxHPFlat")    Target = &MaxHPFlat;
-    else if (StatName == "AttackPercent")Target = &AttackPercent;
-    else if (StatName == "HPPercent")    Target = &HPPercent;
+    if (StatName == "AttackFlat") Target = &AttackFlat;
+    else if (StatName == "MaxHPFlat") Target = &MaxHPFlat;
+    else if (StatName == "AttackPercent") Target = &AttackPercent;
+    else if (StatName == "HPPercent") Target = &HPPercent;
 
     if (!Target) return false;
 
@@ -536,13 +478,13 @@ bool UAbilityManagerComponent::UpgradePlayerStat(const FString& StatName)
         return false;
     }
 
-    // Paiement et incrément
+    // spend gold et upgrade
     PlayerRef->AddGold(-Cost);
     Target->Level++;
 
-    UE_LOG(LogTemp, Log, TEXT("[Upgrade] %s -> Lvl %d | Nouveau coût = %.0f"), *StatName, Target->Level, Target->GetNextCost());
+    UE_LOG(LogTemp, Log, TEXT("[Upgrade] %s -> Lvl %d | Nouveau cout = %.0f"),
+        *StatName, Target->Level, Target->GetNextCost());
 
-    // Application
     if (StatName == "AttackFlat")
     {
         PlayerRef->Attack = Target->GetCurrentValue();
@@ -551,19 +493,22 @@ bool UAbilityManagerComponent::UpgradePlayerStat(const FString& StatName)
     {
         PlayerRef->MaxHP = Target->GetCurrentValue();
         PlayerRef->CurrentHP = FMath::Clamp(PlayerRef->CurrentHP, 0.f, PlayerRef->MaxHP);
+
+        // update du widget
         if (PlayerRef->GameplayWidgetRef)
             PlayerRef->GameplayWidgetRef->UpdateHealth(PlayerRef->CurrentHP, PlayerRef->MaxHP);
     }
     else if (StatName == "AttackPercent")
     {
-        // +1% par niveau -> multiplicateur total
+        // +1% par niveau 
         PlayerRef->AttackMultiplier = 1.0f + (Target->Level * 0.01f);
     }
     else if (StatName == "HPPercent")
     {
-        // +1% par niveau -> multiplier les HP plats
+        PlayerRef->HealthMultiplier = 1.0f + (Target->Level * 0.01f);
+
         const float FlatHP = MaxHPFlat.GetCurrentValue();
-        const float NewMax = FlatHP * (1.0f + Target->Level * 0.01f);
+        const float NewMax = FlatHP * PlayerRef->HealthMultiplier;
 
         const float Ratio = (PlayerRef->MaxHP > 0.f) ? (PlayerRef->CurrentHP / PlayerRef->MaxHP) : 1.f;
         PlayerRef->MaxHP = NewMax;
@@ -575,4 +520,3 @@ bool UAbilityManagerComponent::UpgradePlayerStat(const FString& StatName)
 
     return true;
 }
-

@@ -5,20 +5,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "WaveGameMode.h"
 #include "AbilityManagerComponent.h"
+#include "Components/TextRenderComponent.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
-    // === VISUAL ROOT ===
     VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
     VisualRoot->SetupAttachment(RootComponent);
 
-    // === MAIN ENEMY MESH PLANE ===
     EnemyMeshPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EnemyMeshPlane"));
     EnemyMeshPlane->SetupAttachment(VisualRoot);
     EnemyMeshPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     EnemyMeshPlane->SetHiddenInGame(false);
 
-    // === STATUS EFFECT PLANES ===
     FrozenPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FrozenPlane"));
     FrozenPlane->SetupAttachment(VisualRoot);
     FrozenPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -33,6 +31,9 @@ AEnemyCharacter::AEnemyCharacter()
     WeakenedPlane->SetupAttachment(VisualRoot);
     WeakenedPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     WeakenedPlane->SetHiddenInGame(true);
+
+    HealthTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("HealthText"));
+    HealthTextComponent->SetupAttachment(RootComponent);
 }
 void AEnemyCharacter::BeginPlay()
 {
@@ -53,13 +54,13 @@ void AEnemyCharacter::ConfigStats(int Wave)
     const float BaseGold = GoldOnDeath;
     const float BaseGem = GemOnDeath;
 
-    // paramètres ajustables
+    // Maths
     const int WavesPerCycle = 10;
-    const float GlobalStepMultiplier = 1.3f;   // à chaque palier de 10 vagues, +30%
-    const float InCycleGrowth = 0.08f;         // croissance à l’intérieur d’un cycle (~8% par vague)
+    const float GlobalStepMultiplier = 1.3f;   
+    const float InCycleGrowth = 0.08f;
 
-    const int CycleIndex = (Wave - 1) / WavesPerCycle;   // ex : 0 pour vagues 1-10, 1 pour 11-20...
-    const int WaveInCycle = (Wave - 1) % WavesPerCycle;   // ex : 0..9
+    const int CycleIndex = (Wave - 1) / WavesPerCycle;   // 0 pour vagues 1-10, 1 pour 11-20...
+    const int WaveInCycle = (Wave - 1) % WavesPerCycle;
 
     // croissance globale par palier
     const float GlobalMultiplier = FMath::Pow(GlobalStepMultiplier, CycleIndex);
@@ -79,11 +80,27 @@ void AEnemyCharacter::ConfigStats(int Wave)
     GoldOnDeath = FMath::FloorToFloat(BaseGold * GoldScale);
     GemOnDeath = FMath::FloorToFloat(BaseGem * GemScale);
 
-    // chance bonus inchangée
     GemOnDeath += (FMath::FRand() <= FullGemOnDeathChance) ? 1.f : 0.f;
 
+
+    UpdateHealthText();
     UE_LOG(LogTemp, Warning, TEXT("[Wave %d] Cycle %d | HPx%.2f Dmgx%.2f Goldx%.2f"),
         Wave, CycleIndex, HPScale, DmgScale, GoldScale);
+}
+
+void AEnemyCharacter::UpdateHealthText()
+{
+    const FString HPText = FString::Printf(TEXT("%.0f / %.0f"), CurrentHP, MaxHP);
+    HealthTextComponent->SetText(FText::FromString(HPText));
+
+}
+
+void AEnemyCharacter::Heal(float HealAmount)
+{
+    if (!IsAlive()) return;
+
+    CurrentHP = FMath::Clamp(CurrentHP + HealAmount, 0.f, MaxHP);
+    UpdateHealthText();
 }
 
 void AEnemyCharacter::Tick(float DeltaTime)
@@ -108,6 +125,8 @@ void AEnemyCharacter::Tick(float DeltaTime)
 void AEnemyCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageType, AActor* Source)
 {
     Super::TakeCustomDamage(DamageAmount, DamageType, Source);
+
+    UpdateHealthText();
 
     if (!IsAlive() && PlayerRef && PlayerRef->AbilityManager)
     {

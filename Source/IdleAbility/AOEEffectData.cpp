@@ -2,8 +2,8 @@
 
 #include "AOEEffectData.h"
 #include "CustomCharacter.h"
-#include "BaseProjectile.h"
 #include "AbilityManagerComponent.h"
+#include "BaseProjectile.h"
 #include "EngineUtils.h"
 
 bool UAOEEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
@@ -11,13 +11,12 @@ bool UAOEEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     if (!Context.Source || !Context.Ability)
         return false;
 
-    // 1) Centre prioritaire: le projectile s'il existe (spike, tornade, zone persistante)
     FVector Center;
+
     if (Context.Projectile)
     {
         Center = Context.Projectile->GetActorLocation();
     }
-    // 2) Sinon, comportement historique
     else if (TriggerPhase == EEffectTriggerPhase::OnCast && Context.Source)
     {
         Center = Context.Source->GetActorLocation();
@@ -34,7 +33,6 @@ bool UAOEEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
     UWorld* World = Context.Source->GetWorld();
     if (!World) return false;
 
-    // Rassembler toutes les cibles dans le rayon
     TArray<ACustomCharacter*> Affected;
     for (TActorIterator<ACustomCharacter> It(World); It; ++It)
     {
@@ -48,7 +46,7 @@ bool UAOEEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         }
     }
 
-    // Appliquer les SubEffects a chaque cible trouvee
+    // applique sous effet a tous ceux dans l'aoe, aka dans le radius
     for (ACustomCharacter* C : Affected)
     {
         FAbilityEffectContext NewCtx = Context;
@@ -58,15 +56,18 @@ bool UAOEEffectData::ApplyEffect(const FAbilityEffectContext& Context) const
         {
             if (!Sub) continue;
 
-            UAbilityManagerComponent* Manager = Context.Source->FindComponentByClass<UAbilityManagerComponent>();
-            if (Manager)
+            if (UAbilityManagerComponent* Manager = Context.Source->FindComponentByClass<UAbilityManagerComponent>())
+            {
                 Manager->ApplyEffectToTarget(Sub, NewCtx);
+            }
             else
+            {
                 Sub->ApplyEffect(NewCtx);
+            }
         }
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("[AOE] %s a affecte %d cibles (rayon=%.0f)"),
+    UE_LOG(LogTemp, Log, TEXT("[AOE] %s a affecte %d cibles (rayon=%.0f)"),
         *Context.Source->GetName(),
         Affected.Num(),
         Radius);

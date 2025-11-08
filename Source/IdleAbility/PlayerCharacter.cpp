@@ -76,6 +76,20 @@ void APlayerCharacter::TakeCustomDamage(float DamageAmount, EDamageType DamageTy
     Super::TakeCustomDamage(DamageAmount, DamageType, Source);
 
     GameplayWidgetRef->UpdateHealth(CurrentHP, MaxHP);
+
+    if (CurrentHP <= 0)
+    {
+        GameModeRef->HandlePlayerDeath();
+    }
+
+}
+
+void APlayerCharacter::Heal(float HealAmount)
+{
+    if (!IsAlive()) return;
+
+    CurrentHP = FMath::Clamp(CurrentHP + HealAmount, 0.f, MaxHP);
+    GameplayWidgetRef->UpdateHealth(CurrentHP, MaxHP);
 }
 
 void APlayerCharacter::AddGold(float amount)

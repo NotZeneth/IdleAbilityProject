@@ -35,8 +35,6 @@ void UGameplayWidget::NativeConstruct()
 
 }
 
-// --- UPDATE FUNCTIONS ---
-
 void UGameplayWidget::UpdateHealth(float CurrentHP, float MaxHP)
 {
     if (HealthBar)
@@ -63,9 +61,6 @@ void UGameplayWidget::UpdateWave(int Wave)
     if (TextWave)
         TextWave->SetText(FText::FromString(FString::Printf(TEXT("Wave: %d"), Wave)));
 }
-
-
-// --- BUTTONS ---
 
 void UGameplayWidget::OnAddGold()
 {
@@ -107,7 +102,7 @@ void UGameplayWidget::OnToggleShop()
 
         if (bShow)
         {
-            ShopWidgetRef->PopulateShop(); // refresh des données
+            ShopWidgetRef->PopulateShop(); // refresh
         }
     }
 }

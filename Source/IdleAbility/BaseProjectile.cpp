@@ -102,15 +102,13 @@ void ABaseProjectile::InitializeProjectile()
 
 }
 
-
 void ABaseProjectile::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Direction mise à jour selon le type de mouvement
     switch (MovementType)
     {
-    case EProjectileMovementType::Homing: // 2D quaternion cool mais wah 3d c'est stylish donc je laisse
+    case EProjectileMovementType::Homing: // j'aurai du 2D / quaternion mais en fait ca rend bien donc je laisse
         if (Target && Target->IsAlive())
         {
             FVector DesiredDir = (Target->GetActorLocation() - GetActorLocation());
@@ -133,23 +131,18 @@ void ABaseProjectile::Tick(float DeltaTime)
         break;
 
     case EProjectileMovementType::Forward:
-        // rien à changer, on garde la direction initiale
         break;
 
     case EProjectileMovementType::TowardTarget:
-        // rien non plus ici, tu veux du straight-to-target sans adaptation
         break;
     }
 
-    // Mouvement
     FVector NewLoc = GetActorLocation() + InitialDirection * ProjectileSpeed * DeltaTime;
 
-    //  Lock profondeur Y -> vue de profil 2D
     NewLoc.Y = LockedY;
 
     SetActorLocation(NewLoc, true);
 
-    // Rotation pour aligner le mesh sur le mouvement
     if (bRotateToVelocity)
     {
         FRotator Rot = InitialDirection.Rotation();
@@ -202,14 +195,14 @@ void ABaseProjectile::OnProjectileOverlap(
 
         FAbilityEffectContext Ctx;
         Ctx.Source = Source;
-        Ctx.Target = HitCharacter;   // valeur par défaut
+        Ctx.Target = HitCharacter;
         Ctx.Ability = Ability;
         Ctx.Projectile = this;
 
-        // Cas spécifique : effet AreaPulse -> persistance ancrée au joueur
+        // Cas spécifique : effet AreaPulse, la je dois le stocker chez le joueur et pas l'enemy
         if (Effect->IsA(UAreaPulseEffectData::StaticClass()))
         {
-            Ctx.Target = Source; // <- persistance stockée chez le joueur
+            Ctx.Target = Source;
         }
 
         if (Manager)
@@ -218,7 +211,6 @@ void ABaseProjectile::OnProjectileOverlap(
             Effect->ApplyEffect(Ctx);
     }
 }
-
 
 void ABaseProjectile::DestroyProjectile()
 {

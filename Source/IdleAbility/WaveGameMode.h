@@ -14,71 +14,75 @@ class IDLEABILITY_API AWaveGameMode : public AGameModeBase
 {
     GENERATED_BODY()
 
+protected:
+    virtual void BeginPlay() override;
+
 public:
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
-    FVector SpawnLocation;
+     // point de spawn des mobs
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
+    FVector SpawnLocation = FVector::ZeroVector;
 
-    // Classe des ennemis standards
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    // base
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
     TSubclassOf<AEnemyCharacter> EnemyClass;
 
-    // Classe des mini-boss (vagues se terminant par 5)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    // miniboss 5, 15, 25...
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
     TSubclassOf<AEnemyCharacter> MiniBossClass;
 
-    // Classe des boss (vagues se terminant par 0)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    // boss 10, 20, 30....
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
     TSubclassOf<AEnemyCharacter> BossClass;
 
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
     int32 EnemiesPerWave = 4;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Spawning")
+    float SpawnInterval = 0.75f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves|Timing")
+    float TimeBetweenWaves = 3.0f;
+
+
+    UPROPERTY(BlueprintReadOnly, Category = "Waves|State")
+    int32 CurrentWave = 0;
+
+    int32 EnemiesLeftToSpawn = 0;
 
     int32 EffectiveNumberToSpawnThisWave = 4;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
-    float SpawnInterval = 0.5f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
-    float TimeBetweenWaves = 3.0f;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Waves")
-    int32 CurrentWave = 0;
-
-    UFUNCTION(BlueprintCallable, Category = "Waves")
-    void StartSpawning();
-
-    UFUNCTION() // Je pourrai mettre aactor mais + simple comme ca la
-    void OnEnemyDied(AEnemyCharacter* DeadEnemy);
-
-    UPROPERTY(BlueprintReadOnly, Category = "Helper")
+    UPROPERTY(BlueprintReadOnly, Category = "Waves|State")
     TArray<AEnemyCharacter*> EnemyList;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Helper")
-    APlayerCharacter* PlayerRef;
+    UPROPERTY(BlueprintReadOnly, Category = "References")
+    APlayerCharacter* PlayerRef = nullptr;
 
-// Gameplay
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    FVector WallLocation = FVector(0,0,0);
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
+    FVector WallLocation = FVector::ZeroVector;
 
-    UFUNCTION(BlueprintCallable, Category = "Waves")
+
+
+
+    UFUNCTION(BlueprintCallable, Category = "Waves|Control")
+    void StartSpawning();
+
+    UFUNCTION(BlueprintCallable, Category = "Waves|Control")
     void JumpToWave(int NewWave);
 
+    UFUNCTION(BlueprintCallable, Category = "Waves|Control")
+    void HandlePlayerDeath();
 
+    UFUNCTION()
+    void OnEnemyDied(AEnemyCharacter* DeadEnemy);
 
-protected :
-
-    virtual void BeginPlay() override;
+protected:
 
     void StartWave();
 
-    UFUNCTION() 
+    UFUNCTION()
     void SpawnEnemy();
 
     UPROPERTY()
     FTimerHandle SpawnTimerHandle;
-
-    int32 EnemiesLeftToSpawn = 0;
-
 };

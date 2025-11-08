@@ -6,6 +6,8 @@
 #include "AbilityEffectData.h"
 #include "DestroyProjectileEffectData.generated.h"
 
+// Bah un projectile est pas forcement detruit : que ce soit on cast, on expire ou on hit, l'effet est interessant
+// Certains utilisent juste le "est detruit apres X sec"
 UCLASS()
 class IDLEABILITY_API UDestroyProjectileEffectData : public UAbilityEffectData
 {

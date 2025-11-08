@@ -18,7 +18,8 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     if (!Manager)
         return false;
 
-    // --- Sélection du projectile ---
+    // S'il y a plusieurs projectile, on roll lequel on prend
+
     float TotalWeight = 0.f;
     for (const FWeightedProjectile& Opt : ProjectileOptions)
     {
@@ -42,7 +43,6 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
     }
     if (!Chosen) return false;
 
-    // --- Projectile principal (la vraie cible) ---
     auto SpawnSingleProjectile = [&](ACustomCharacter* Target, float YawOffset)
         {
             if (!Target) return;
@@ -74,14 +74,13 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
             UE_LOG(LogTemp, Log, TEXT("[SpawnProjectile] Tir vers %s (YawOffset %.1f°)"),
                 *Target->GetName(), YawOffset);
         };
-
-    // --- Tir principal ---
+    
+    // tir "normal"
     SpawnSingleProjectile(Context.Target, 0.f);
 
-    // --- Gestion du Multishot RNG ---
+    // multishot
     if (bEnableMultishot)
     {
-        // 1) Detecter si des upgrades existent sur cette ability
         bool bHasChanceUpgrade = false;
         bool bHasAmountUpgrade = false;
 
@@ -92,16 +91,14 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
             bHasAmountUpgrade = (Up.MultishotAmount.EffectValues.Num() > 0);
         }
 
-        // 2) Lire les valeurs
-        float Chance = MultishotChance;                 // fallback: chance definie sur l'effet (0..1)
-        int32 Amount = MultishotAmount;                  // fallback: amount defini sur l'effet
+        float Chance = MultishotChance;
+        int32 Amount = MultishotAmount;
 
         if (Manager && Context.Ability)
         {
             if (bHasChanceUpgrade)
             {
                 const float UpChance = Manager->GetUpgradeValue(Context.Ability, TEXT("MultishotChance"));
-                // on suppose que les tracks d’upgrade stockent des chances 0..1
                 Chance = FMath::Clamp(UpChance, 0.f, 1.f);
             }
 
@@ -112,15 +109,12 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
             }
         }
 
-        // 3) RNG sur la chance calculee
         const float RandRoll = FMath::FRand();
         if (RandRoll <= Chance && Amount > 0)
         {
-            // Cherche d'autres ennemis
             TArray<ACustomCharacter*> Candidates;
             Manager->GetEnemiesInRange(Caster, Context.Ability->Range, Candidates);
 
-            // Retirer la cible principale
             if (Context.Target)
                 Candidates.Remove(Context.Target);
 
@@ -132,7 +126,6 @@ bool USpawnProjectileEffectData::ApplyEffect(const FAbilityEffectContext& Contex
 
             Algo::RandomShuffle(Candidates);
 
-            // Limiter par le nombre de candidats
             const int32 ExtraShots = FMath::Min(Amount, Candidates.Num());
             UE_LOG(LogTemp, Warning, TEXT("[Multishot] Proc -> %d projectiles supplementaires (Chance=%.2f)"), ExtraShots, Chance);
 
