@@ -68,7 +68,7 @@ void UShopWidget::OnCloseClicked()
     if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
     {
         PC->SetPause(false);
-        PC->bShowMouseCursor = false;
+        PC->bShowMouseCursor = true;
     }
 
     SetVisibility(ESlateVisibility::Hidden);

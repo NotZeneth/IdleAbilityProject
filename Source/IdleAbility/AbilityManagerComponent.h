@@ -127,6 +127,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Abilities")
     void ResetAllEffectsAndCooldowns();
 
+    UFUNCTION(BlueprintCallable, Category = "Upgrades|Player")
+    void ApplyCurrentPlayerUpgrades();
+
     UPROPERTY()
     TArray<ACustomCharacter*> PendingRemovals;
 
@@ -166,4 +169,5 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Upgrades|Player")
     bool UpgradePlayerStat(const FString& StatName);
+
 };

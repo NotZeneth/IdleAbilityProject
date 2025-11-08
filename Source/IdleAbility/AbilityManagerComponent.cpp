@@ -15,26 +15,64 @@ UAbilityManagerComponent::UAbilityManagerComponent()
     PrimaryComponentTick.bCanEverTick = true;
 }
 
+#include "PlayerCharacter.h"
+#include "GameplayWidget.h"
+
 void UAbilityManagerComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    // en vrai je devrais avoir le player qui setup ca, mais flemme donc on le chope via le World
     if (UWorld* World = GetWorld())
     {
         GameModeRef = Cast<AWaveGameMode>(World->GetAuthGameMode());
     }
 
-    // init des upgrades pour chaque ability equiped
+    PlayerRef = Cast<APlayerCharacter>(GetOwner());
+
     for (FAbilitySpec& Spec : EquippedAbilities)
     {
         if (Spec.Ability)
         {
             UpgradeLevelsByAbility.Add(Spec.Ability, FUpgradeLevels());
-            Spec.bUnlocked = Spec.Ability->bUnlocked; // synchro avec la valeur du DA
+            Spec.bUnlocked = Spec.Ability->bUnlocked;
         }
     }
+
+    ApplyCurrentPlayerUpgrades();
 }
+
+void UAbilityManagerComponent::ApplyCurrentPlayerUpgrades()
+{
+    if (!PlayerRef) return;
+
+    const float NewAttackFlat = AttackFlat.GetCurrentValue();
+    const float NewHPFlat = MaxHPFlat.GetCurrentValue();
+
+    const float AtkMult = 1.0f + (AttackPercent.Level * 0.01f);
+    const float HPMult = 1.0f + (HPPercent.Level * 0.01f);
+
+
+    PlayerRef->Attack = NewAttackFlat;
+    PlayerRef->AttackMultiplier = AtkMult;
+
+    const float OldMax = PlayerRef->MaxHP;
+    const float OldCur = PlayerRef->CurrentHP;
+
+    PlayerRef->MaxHP = NewHPFlat * HPMult;
+
+    const float Ratio = (OldMax > 0.f) ? FMath::Clamp(OldCur / OldMax, 0.f, 1.f) : 1.f;
+    PlayerRef->CurrentHP = FMath::Clamp(PlayerRef->MaxHP * Ratio, 0.f, PlayerRef->MaxHP);
+
+    if (PlayerRef->GameplayWidgetRef)
+    {
+        PlayerRef->GameplayWidgetRef->UpdateHealth(PlayerRef->CurrentHP, PlayerRef->MaxHP);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[Upgrades] Applied: Attack=%.1f x%.2f | MaxHP=%.1f (LevelAtk%%=%d, LevelHP%%=%d)"),
+        PlayerRef->Attack, PlayerRef->AttackMultiplier, PlayerRef->MaxHP,
+        AttackPercent.Level, HPPercent.Level);
+}
+
 
 void UAbilityManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {

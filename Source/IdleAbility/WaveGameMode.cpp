@@ -142,24 +142,31 @@ void AWaveGameMode::JumpToWave(int NewWave)
 
 void AWaveGameMode::HandlePlayerDeath()
 {
-    // Juste au cas où
-    if (CurrentWave <= 1)
-    {
-        JumpToWave(1);
-        return;
-    }
+    if (!PlayerRef) return;
 
     int32 TargetWave = CurrentWave;
-
-    // si on est sur une vague multiple de 5 (5, 10, 15, 20...) -> revenir à la précédente
-    if (CurrentWave % 5 == 0)
-    {
+    if (CurrentWave <= 1)
+        TargetWave = 1;
+    else if (CurrentWave % 5 == 0)
         TargetWave = FMath::Max(1, CurrentWave - 1);
-    }
 
     UE_LOG(LogTemp, Warning, TEXT("[Wave] Player died on wave %d -> restarting wave %d"), CurrentWave, TargetWave);
-    PlayerRef->CurrentHP = PlayerRef->MaxHP;
-    PlayerRef->Heal(1);
-    JumpToWave(TargetWave);
-}
 
+    JumpToWave(TargetWave);
+
+    FTimerHandle HealDelay;
+    GetWorldTimerManager().SetTimer(HealDelay, [this]()
+        {
+            if (PlayerRef)
+            {
+                PlayerRef->CurrentHP = PlayerRef->MaxHP;
+                PlayerRef->isFrozen = false;
+
+                if (PlayerRef->GameplayWidgetRef)
+                    PlayerRef->GameplayWidgetRef->UpdateHealth(PlayerRef->CurrentHP, PlayerRef->MaxHP);
+
+                UE_LOG(LogTemp, Warning, TEXT("[Wave] Delayed heal applied (%.0f/%.0f)"), PlayerRef->CurrentHP, PlayerRef->MaxHP);
+            }
+
+        }, 0.2f, false);
+}
